@@ -9,6 +9,10 @@ import NodesService from '../services/NodesService'
 
 import Annotate from './presenter'
 
+const PENDING = 'PENDING'
+const COMPUTING = 'COMPUTING'
+const COMPUTED = 'COMPUTED'
+
 class AnnotateDataWrapper extends Component {
   static propTypes = {
     documentId: PropTypes.string.isRequired,
@@ -19,19 +23,21 @@ class AnnotateDataWrapper extends Component {
         text: PropTypes.string.isRequired,
         type: PropTypes.oneOf(Object.values(nodeTypes))
       })
-    ).isRequired,
-    nodesReceived: PropTypes.bool.isRequired,
+    ),
+    nodesReceived: PropTypes.bool,
     setDisplayLoadingSpinner: PropTypes.func.isRequired,
     text: PropTypes.string,
     unsetDisplayLoadingSpinner: PropTypes.func.isRequired
   }
 
   static defaultProps = {
-    text: null
+    text: null,
+    nodes: [],
+    nodesReceived: false
   }
 
   state = {
-    computingNodes: false
+    computingNodes: PENDING
   }
 
   componentDidMount () {
@@ -47,11 +53,11 @@ class AnnotateDataWrapper extends Component {
     }
   }
 
-  componentDidUpdate (prevProps) {
-    if (!this.isLoading) {
+  componentDidUpdate (prevProps, prevState) {
+    if (this.state.computingNodes === COMPUTED && prevState.computingNodes === COMPUTING) {
       this.props.unsetDisplayLoadingSpinner()
     }
-    if (this.isLoading && prevProps.nodes.length !== this.props.nodes.length) {
+    if (!this.isLoading && this.state.computingNodes === PENDING) {
       this.computeNodes()
     }
   }
@@ -62,17 +68,16 @@ class AnnotateDataWrapper extends Component {
   }
 
   get nodesGenerated () {
-    return this.nodesService !== undefined &&
-      !this.state.computingNodes
+    return this.state.computingNodes === COMPUTED
   }
 
   computeNodes () {
-    this.setState({ computingNodes: true })
+    this.setState({ computingNodes: COMPUTING })
     setTimeout(() => {
       this.nodesService = new NodesService(this.props.text, this.props.nodes)
       this.nodesService.generate()
       this.setState({
-        computingNodes: false
+        computingNodes: COMPUTED
       })
     })
   }
@@ -93,9 +98,9 @@ class AnnotateDataWrapper extends Component {
 const mapStateToProps = (store, props) => {
   const documentObj = store.annotate[props.documentId]
   return {
-    nodes: documentObj.nodes,
-    text: documentObj.text,
-    nodesReceived: documentObj.nodesReceived
+    nodes: documentObj && documentObj.nodes,
+    text: documentObj && documentObj.text,
+    nodesReceived: documentObj !== undefined && documentObj.nodesReceived
   }
 }
 

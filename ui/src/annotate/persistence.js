@@ -1,29 +1,13 @@
-// TODO: This file is to interact with the api/other persistent states. hook this
-// up to an api_client once the api is written.
-import { v4 as uuid } from 'uuid'
-
 import router from '../app/router'
 
 import * as actions from './actions'
 import * as appActions from '../app/actions' // This will likely change to be an app action
-
-// TODO: replace this with a call to the persistence datastore (api, sdk, whatever)
-// most likely this will be stored in an s3 bucket whose id is used as the file name
-function uploadTextDocument (text) {
-  // consider adding this to a sessionStore to allow demoing functionality
-  // for non-loggedin users
-  return Promise.resolve(
-    {
-      id: uuid(),
-      text
-    }
-  )
-}
+import grit from '../grit'
 
 export function submitText (text) {
   return function (dispatch) {
     dispatch(appActions.setDisplayLoadingSpinner())
-    return uploadTextDocument(text)
+    return grit.uploadTextDocument(text)
       .then(
         (data) => {
           dispatch(actions.loadText(data.id, data.text))
@@ -48,36 +32,22 @@ export function submitText (text) {
 
 export function submitHighlight (text, range) {}
 
-// Make this method part of the sessionStore option
-function getDocumentNodes (documentId) {
-  return Promise.resolve(
-    []
-  )
-}
-
 export function fetchNodes (documentId) {
   return function (dispatch) {
-    return getDocumentNodes(documentId).then(
+    return grit.getDocumentNodes(documentId).then(
       (data) => {
-        dispatch(actions.setDocumentNodes(data.id, data))
+        dispatch(actions.setDocumentNodes(documentId, data))
         return data
       }
     )
   }
 }
 
-// Make this method part of the sessionStore option
-function getDocumentText (documentId) {
-  return Promise.resolve(
-    []
-  )
-}
-
 export function fetchText (documentId) {
   return function (dispatch) {
-    return getDocumentText(documentId).then(
+    return grit.getDocumentText(documentId).then(
       (data) => {
-        dispatch(actions.loadText(data.id, data))
+        dispatch(actions.loadText(documentId, data))
         return data
       }
     )
