@@ -21,7 +21,7 @@ export default function (state = initialState, action) {
         }
       )
     case actionTypes.LOAD_TEXT:
-      return { ...state, [action.id]: { nodes: action.text } }
+      return { ...state, [action.id]: { text: action.text, nodes: [], nodesReceived: true } }
     default:
       return state
   }

@@ -1,6 +1,8 @@
 import React, { Component } from 'react'
 import PropTypes from 'prop-types'
 
+import TextFormat from '@instructure/ui-core/lib/components/Text'
+
 import { TEXT } from '../../nodeTypes'
 
 export default class Text extends Component {
@@ -12,7 +14,10 @@ export default class Text extends Component {
   }
 
   render () {
-    // eslint-disable-next-line react/no-danger
-    return <span dangerouslySetInnerHTML={{ __html: this.props.node.text }} />
+    return (
+      <TextFormat>
+        {this.props.node.text}
+      </TextFormat>
+    )
   }
 }

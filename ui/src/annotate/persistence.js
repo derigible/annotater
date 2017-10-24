@@ -1,26 +1,21 @@
 // TODO: This file is to interact with the api/other persistent states. hook this
 // up to an api_client once the api is written.
-import uniqueId from 'lodash/uniqueId'
-import router from './router'
+import { v4 as uuid } from 'uuid'
+
+import router from '../app/router'
 
 import * as actions from './actions'
 import * as appActions from '../app/actions' // This will likely change to be an app action
-import * as nodeTypes from './nodeTypes'
 
-// TODO: data transform should be on the api, but is here for now to help aid in ui testing - should it?
-// At any rate, this will be replaced by an api call and teh function below won't be changed
-function transformLoadText (text) {
-  return new Promise(
-    (resolve) => {
-      return {
-        id: uniqueId(),
-        nodes: [
-          {
-            text,
-            type: nodeTypes.TEXT
-          }
-        ]
-      }
+// TODO: replace this with a call to the persistence datastore (api, sdk, whatever)
+// most likely this will be stored in an s3 bucket whose id is used as the file name
+function uploadTextDocument (text) {
+  // consider adding this to a sessionStore to allow demoing functionality
+  // for non-loggedin users
+  return Promise.resolve(
+    {
+      id: uuid(),
+      text
     }
   )
 }
@@ -28,17 +23,17 @@ function transformLoadText (text) {
 export function submitText (text) {
   return function (dispatch) {
     dispatch(appActions.setDisplayLoadingSpinner())
-    return transformLoadText(text)
+    return uploadTextDocument(text)
       .then(
         (data) => {
-          dispatch(actions.loadText(data.id, data.nodes))
+          dispatch(actions.loadText(data.id, data.text))
           return data
         },
         (error) => dispatch(appActions.setAlert(error))
       )
       .then(
         (data) => {
-          router.navigate(data.id)
+          router.navigate(`${data.id}`)
           return data
         }
       ).then(

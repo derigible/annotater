@@ -9,7 +9,7 @@ const annotateRouter = Router()
   .use('/:id', ({ path, resolve, exiting, params, location }) => {
     resolve({
       app,
-      view: <Annotate />
+      view: <Annotate documentId={params.id} />
     })
   })
   .use('/*', ({ path, resolve, exiting, params, location }) => {
