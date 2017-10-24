@@ -27,6 +27,7 @@ export function submitText (text) {
       .then(
         (data) => {
           dispatch(actions.loadText(data.id, data.text))
+          dispatch(actions.setDocumentNodes(data.id, []))
           return data
         },
         (error) => dispatch(appActions.setAlert(error))
@@ -46,3 +47,39 @@ export function submitText (text) {
 }
 
 export function submitHighlight (text, range) {}
+
+// Make this method part of the sessionStore option
+function getDocumentNodes (documentId) {
+  return Promise.resolve(
+    []
+  )
+}
+
+export function fetchNodes (documentId) {
+  return function (dispatch) {
+    return getDocumentNodes(documentId).then(
+      (data) => {
+        dispatch(actions.setDocumentNodes(data.id, data))
+        return data
+      }
+    )
+  }
+}
+
+// Make this method part of the sessionStore option
+function getDocumentText (documentId) {
+  return Promise.resolve(
+    []
+  )
+}
+
+export function fetchText (documentId) {
+  return function (dispatch) {
+    return getDocumentText(documentId).then(
+      (data) => {
+        dispatch(actions.loadText(data.id, data))
+        return data
+      }
+    )
+  }
+}

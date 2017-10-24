@@ -2,7 +2,9 @@ import React, { Component } from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
+import * as appActions from '../../app/actions'
 import * as nodeTypes from '../nodeTypes'
+import * as persistence from '../persistence'
 import NodesService from '../services/NodesService'
 
 import Annotate from './presenter'
@@ -33,14 +35,15 @@ class AnnotateDataWrapper extends Component {
   }
 
   componentDidMount () {
+    this.props.setDisplayLoadingSpinner()
     if (this.props.text === null) {
       this.props.fetchText(this.props.documentId)
     }
     if (!this.props.nodesReceived) {
       this.props.fetchNodes(this.props.documentId)
     }
-    if (this.isLoading) {
-      this.props.setDisplayLoadingSpinner()
+    if (!this.isLoading) {
+      this.computeNodes()
     }
   }
 
@@ -48,7 +51,7 @@ class AnnotateDataWrapper extends Component {
     if (!this.isLoading) {
       this.props.unsetDisplayLoadingSpinner()
     }
-    if (this.isLoading && prevProps.nodes.length !== this.nodes.length) {
+    if (this.isLoading && prevProps.nodes.length !== this.props.nodes.length) {
       this.computeNodes()
     }
   }
@@ -71,7 +74,7 @@ class AnnotateDataWrapper extends Component {
   }
 
   render () {
-    if (this.isLoading) {
+    if (this.isLoading || this.nodesService === undefined) {
       return <div />
     }
     return (
@@ -88,8 +91,15 @@ const mapStateToProps = (store, props) => {
   return {
     nodes: documentObj.nodes,
     text: documentObj.text,
-    nodesReceived: store.nodesReceived
+    nodesReceived: documentObj.nodesReceived
   }
 }
 
-export default connect(mapStateToProps, null)(AnnotateDataWrapper)
+const mapDispatchToProps = {
+  fetchNodes: persistence.fetchNodes,
+  fetchText: persistence.fetchText,
+  setDisplayLoadingSpinner: appActions.setDisplayLoadingSpinner,
+  unsetDisplayLoadingSpinner: appActions.unsetDisplayLoadingSpinner
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(AnnotateDataWrapper)

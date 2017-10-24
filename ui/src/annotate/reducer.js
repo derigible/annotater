@@ -5,6 +5,7 @@ import * as actionTypes from './actionTypes'
 const initialState = {}
 
 export default function (state = initialState, action) {
+  console.log(action)
   switch (action.type) {
     case actionTypes.SET_HIGHLIGHT:
       return update(state,
@@ -21,8 +22,31 @@ export default function (state = initialState, action) {
         }
       )
     case actionTypes.LOAD_TEXT:
-      return { ...state, [action.id]: { text: action.text, nodes: [], nodesReceived: true } }
+      return update(state,
+        {
+          [action.id]: {
+            [getVerb(state, action)]: {
+              text: action.text
+            }
+          }
+        }
+      )
+    case actionTypes.SET_DOCUMENT_NODES:
+      return update(state,
+        {
+          [action.id]: {
+            [getVerb(state, action)]: {
+              nodes: action.nodes,
+              nodesReceived: true
+            }
+          }
+        }
+      )
     default:
       return state
   }
+}
+
+function getVerb (state, action) {
+  return state[action.id] ? '$merge' : '$set'
 }
