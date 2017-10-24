@@ -5,7 +5,6 @@ import * as actionTypes from './actionTypes'
 const initialState = {}
 
 export default function (state = initialState, action) {
-  console.log(action)
   switch (action.type) {
     case actionTypes.SET_HIGHLIGHT:
       return update(state,

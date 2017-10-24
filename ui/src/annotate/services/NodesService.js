@@ -45,17 +45,18 @@ export default class NodesService {
     this.originalNodes.forEach((node) => {
       this.annotationNodes.push(this.createNode(node))
     })
-    if (this.nodes.length > 0) {
-      return this.nodes
+    if (this.nodes.length === 0) {
+      this.annotationNodes.push(
+        this.createNode({
+          range: [0, this.text.length],
+          type: nodeTypes.TEXT,
+          data: {
+            color: 'default',
+            size: 'default'
+          }
+        })
+      )
     }
-    return this.createNode({
-      range: [0, this.text.length - 1],
-      type: nodeTypes.TEXT,
-      data: {
-        color: 'default',
-        size: 'default'
-      }
-    })
   }
 
   addNode (data) {

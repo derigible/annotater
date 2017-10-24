@@ -58,8 +58,12 @@ class AnnotateDataWrapper extends Component {
 
   get isLoading () {
     return this.props.text === null ||
-      !this.props.nodesReceived ||
-      this.state.computingNodes
+      !this.props.nodesReceived
+  }
+
+  get nodesGenerated () {
+    return this.nodesService !== undefined &&
+      !this.state.computingNodes
   }
 
   computeNodes () {
@@ -74,7 +78,7 @@ class AnnotateDataWrapper extends Component {
   }
 
   render () {
-    if (this.isLoading || this.nodesService === undefined) {
+    if (this.isLoading || !this.nodesGenerated) {
       return <div />
     }
     return (
