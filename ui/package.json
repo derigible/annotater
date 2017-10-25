@@ -24,6 +24,7 @@
     "@instructure/ui-themeable": "^4.0.0",
     "@instructure/ui-themes": "^4.0.0",
     "canvas-rce": "^2.5.4",
+    "collections": "^5.0.7",
     "immutability-helper": "^2.4.0",
     "lodash": "^4.17.4",
     "middle-router": "^2.2.0",

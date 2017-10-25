@@ -52,10 +52,12 @@
     "no-var": "error",
     "no-undef": "error",
     "no-console": "error",
+    "no-multi-assign": "off",
     "no-param-reassign": ["error", {
       "props": true
     }],
     "no-cond-assign": ["error", "except-parens"], // airbnb says "never", we allow `while ((foo = next.baz()))`
+    "no-plusplus": "off",
     "object-curly-newline": ["error", { "consistent": true }],
     "object-shorthand": "off",
     "prefer-const": "error",

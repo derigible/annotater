@@ -2,6 +2,16 @@ import { v4 as uuid } from 'uuid'
 
 import * as nodeTypes from '../nodeTypes'
 
+/* Nodes from persistence will have a schema as follows:
+ * {
+ *   id: <string>,
+ *   range: [<offset>, <length>],
+ *   type: oneOf(Annotate.nodeTypes)
+ *   data: {
+ *     <specific to the nodeType>
+ *   }
+ * }
+ * */
 export default function createNode (type, range, data) {
   switch (type) {
     case nodeTypes.TEXT:

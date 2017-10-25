@@ -3,10 +3,8 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
 import * as appActions from '../../app/actions'
-import * as nodeTypes from '../nodeTypes'
+import { nodeDefinition } from '../../react/customPropTypes'
 import * as persistence from '../persistence'
-import NodesService from '../services/NodesService'
-import createNode from '../services/NodeCreatorService'
 
 import Annotate from './presenter'
 
@@ -15,14 +13,7 @@ class AnnotateDataWrapper extends Component {
     documentId: PropTypes.string.isRequired,
     fetchNodes: PropTypes.func.isRequired,
     fetchText: PropTypes.func.isRequired,
-    nodes: PropTypes.arrayOf(
-      PropTypes.shape({
-        id: PropTypes.string.isRequired,
-        range: PropTypes.arrayOf(PropTypes.number).isRequired,
-        type: PropTypes.oneOf(Object.values(nodeTypes)),
-        data: PropTypes.object
-      })
-    ),
+    nodes: PropTypes.arrayOf(nodeDefinition),
     nodesReceived: PropTypes.bool,
     setDisplayLoadingSpinner: PropTypes.func.isRequired,
     submitNode: PropTypes.func.isRequired,
@@ -36,24 +27,13 @@ class AnnotateDataWrapper extends Component {
     nodesReceived: false
   }
 
-  state = { selection: null }
-
   componentDidMount () {
-    this.nodesService = new NodesService()
     this.props.setDisplayLoadingSpinner()
     if (this.props.text === null) {
       this.props.fetchText(this.props.documentId)
-    } else {
-      this.nodesService.text = this.props.text
     }
     if (!this.props.nodesReceived) {
       this.props.fetchNodes(this.props.documentId)
-    }
-  }
-
-  componentWillUpdate (nextProps) {
-    if (this.props.text === null && nextProps.text !== null) {
-      this.nodesService.text = nextProps.text
     }
   }
 
@@ -73,37 +53,22 @@ class AnnotateDataWrapper extends Component {
     this.props.submitNode(
       documentId,
       type,
-      [startOffset, endOffset - startOffset]
+      [startOffset, endOffset]
     )
   }
 
-  makeSelection = (startOffset, endOffset) => {
-    const range = [startOffset, endOffset]
-    const node = createNode(nodeTypes.SELECTION, range)
-    this.nodesService.addSelectionNode(node)
-    this.setState({ selection: node })
-  }
-
-  removeSelection = () => {
-    if (this.state.selection) {
-      this.setState({ selection: null })
-    }
-  }
-
-  // Note that there is no changing nodes, just replace on write
-  changeNode
+  removeNode = (nodeId) => {}
 
   render () {
     if (this.isLoading) {
       return <div />
     }
-    this.nodesService.addNodesFromNodes(this.props.nodes)
     return (
       <Annotate
-        makeSelection={this.makeSelection}
-        removeSelection={this.removeSelection}
         addNode={this.addNode}
-        nodes={this.nodesService.nodes}
+        nodes={this.props.nodes}
+        text={this.props.text}
+        removeNode={this.removeNode}
       />
     )
   }
