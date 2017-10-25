@@ -69,21 +69,15 @@ export default class Annotate extends Component {
     if (nextProps.nodes.length !== this.props.nodes.length) {
       // Need to do something here
     } else if (selection.startOffset !== newSelection.startOffset || selection.endOffset !== newSelection.endOffset) { // will never have highlight when creating new node
-      // TODO: remove old node selection
-
-      // find closest start offset to split the node
-      const startNodeKey = this.getClosestStartOffset(newSelection)
-      // find closest end offset to possibly split the node
-      const endNodeKey = this.getClosestEndOffsetNodeKey(newSelection)
-      if (startNodeKey !== endNodeKey) {
-        this.splitNode(startNodeKey, newSelection.startOffset)
-        this.splitNode(endNodeKey, newSelection.endOffset)
-      } else {
-        this.splitNode(startNodeKey, newSelection.startOffset)
-        // the new startOffset has now been created as a node, we will
-        // need to split that node to account for the unhighlighted portion
-        this.splitNode(newSelection.startOffset, newSelection.endOffset, false, true)
-      }
+      console.log('Before merge')
+      this.nodeMap.map((v,k) => { console.log(k, v)})
+      this.mergeNodes(selection)
+      // TODO: add nodeTypes.SELECTION too all nodes in selection range?
+      console.log('After merge')
+      this.nodeMap.map((v,k) => { console.log(k, v)})
+      this.splitNodes(newSelection)
+      console.log('After split')
+      this.nodeMap.map((v,k) => { console.log(k, v)})
     }
   }
 
@@ -92,7 +86,7 @@ export default class Annotate extends Component {
     let prev = keys[0]
     // TODO: O(N) time. Can do better (possible performance issue)
     for (let i = 1; i < this.nodeMap.length; i++) {
-      if (keys[i] > startOffset) {
+      if (keys[i] >= startOffset) {
         return prev
       }
       prev = keys[i]
@@ -113,6 +107,47 @@ export default class Annotate extends Component {
       prev = values[i]
     }
     return prev.id
+  }
+
+  mergeNodes (selection) {
+    if (selection.startOffset === undefined) { return } // no selection has been made previously
+    console.log(selection)
+    // remove old node selection by merging with node to the left
+    const originalStart = this.getClosestStartOffset(selection.startOffset)
+    const originalEnd = this.getClosestStartOffset(selection.endOffset)
+    console.log('first merge')
+    this.mergeNode(selection.endOffset, originalEnd)
+    console.log('second merge')
+    this.mergeNode(selection.startOffset, originalStart)
+    this.nodeMap.delete(selection.endOffset)
+    this.nodeMap.delete(selection.startOffset)
+  }
+
+  mergeNode (nodeKey, originalNodeKey) {
+    console.log(nodeKey, originalNodeKey)
+    const dyingNode = this.nodeMap.get(nodeKey)
+    const survivingNode = this.nodeMap.get(originalNodeKey)
+    this.nodeMap.set(
+      originalNodeKey,
+      this.createNode([originalNodeKey, dyingNode.range[1]], survivingNode.definitionNodes)
+    )
+  }
+
+  splitNodes (newSelection) {
+    if (newSelection.startOffset === undefined) { return } // selection was removed on this update
+    // find closest start offset to split/merge the node
+    const startNodeKey = this.getClosestStartOffset(newSelection)
+    // find closest end offset to possibly split the node
+    const endNodeKey = this.getClosestEndOffsetNodeKey(newSelection)
+    if (startNodeKey !== endNodeKey) {
+      this.splitNode(startNodeKey, newSelection.startOffset)
+      this.splitNode(endNodeKey, newSelection.endOffset)
+    } else {
+      this.splitNode(startNodeKey, newSelection.startOffset)
+      // the new startOffset has now been created as a node, we will
+      // need to split that node to account for the unhighlighted portion
+      this.splitNode(newSelection.startOffset, newSelection.endOffset, false, true)
+    }
   }
 
   splitNode (nodeKey, splitOffset, selectionOnRight = true, removeSelection = false) {
@@ -140,7 +175,19 @@ export default class Annotate extends Component {
 
   checkSelected = () => {
     const selection = window.getSelection()
-    this.setState({ selection: { startOffset: selection.anchorOffset, endOffset: selection.focusOffset } })
+    console.log(selection)
+    if (selection.anchorOffset === selection.focusOffset) {
+      // Click with no selection, remove selection
+      this.setState({ selection: {} })
+    } else {
+      const startOffset = selection.anchorOffset
+      const endOffset = selection.focusOffset
+      if (startOffset > endOffset) {
+        this.setState({ selection: { startOffset: endOffset, endOffset: startOffset } })
+      } else {
+        this.setState({ selection: { startOffset, endOffset } })
+      }
+    }
   }
 
   createNode = (range, definitionNodes) => {

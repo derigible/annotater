@@ -18,7 +18,6 @@ export default class Node extends Component {
   }
 
   getClassNames () {
-    console.log(this.props.types.includes(nodeTypes.SELECTION))
     return classnames({
       [styles.selection]: this.props.types.includes(nodeTypes.SELECTION)
     })
