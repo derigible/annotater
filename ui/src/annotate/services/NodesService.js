@@ -38,11 +38,12 @@ export default class NodesService {
     this.theText = text
   }
 
-  createUiNode (data) {
+  createUINode (data) {
     return {
       id: data.id,
       text: this.text.substring(...data.range),
       type: NodesService.validateAndGetNodeType(data.type),
+      range: data.range,
       data: data.data
     }
   }
@@ -53,25 +54,24 @@ export default class NodesService {
   }
 
   static sortNodes (nodes) {
+    console.log(nodes)
     return nodes.sort((nodea, nodeb) => nodea.range[0] - nodeb.range[0])
+  }
+
+  addSelectionNode (node) {
+    this.theNodes[nodeTypes.SELECTION] = this.createUINode(node)
+    this.needsSorting = true
   }
 
   // Will add all new nodes. If none are new, does nothing
   addNodesFromNodes (nodes) {
-    let hasTemp = false
     console.log(nodes)
     nodes.forEach((node) => {
       const exists = this.theNodes[node.id]
       if (!exists) {
-        this.theNodes[node.id] = this.createUiNode(node)
+        this.theNodes[node.id] = this.createUINode(node)
         this.needsSorting = true
       }
-      if (node.id === nodeTypes.SELECTION) {
-        hasTemp = true
-      }
     })
-    if (!hasTemp) {
-      delete this.theNodes[nodeTypes.SELECTION] // selection node needs to go away
-    }
   }
 }

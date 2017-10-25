@@ -6,6 +6,7 @@ import * as appActions from '../../app/actions'
 import * as nodeTypes from '../nodeTypes'
 import * as persistence from '../persistence'
 import NodesService from '../services/NodesService'
+import createNode from '../services/NodeCreatorService'
 
 import Annotate from './presenter'
 
@@ -34,6 +35,8 @@ class AnnotateDataWrapper extends Component {
     nodes: [],
     nodesReceived: false
   }
+
+  state = { selection: null }
 
   componentDidMount () {
     this.nodesService = new NodesService()
@@ -74,7 +77,20 @@ class AnnotateDataWrapper extends Component {
     )
   }
 
-  // Note that there is changing nodes, just replace on write
+  makeSelection = (startOffset, endOffset) => {
+    const range = [startOffset, endOffset]
+    const node = createNode(nodeTypes.SELECTION, range)
+    this.nodesService.addSelectionNode(node)
+    this.setState({ selection: node })
+  }
+
+  removeSelection = () => {
+    if (this.state.selection) {
+      this.setState({ selection: null })
+    }
+  }
+
+  // Note that there is no changing nodes, just replace on write
   changeNode
 
   render () {
@@ -84,6 +100,8 @@ class AnnotateDataWrapper extends Component {
     this.nodesService.addNodesFromNodes(this.props.nodes)
     return (
       <Annotate
+        makeSelection={this.makeSelection}
+        removeSelection={this.removeSelection}
         addNode={this.addNode}
         nodes={this.nodesService.nodes}
       />

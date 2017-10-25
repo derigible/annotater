@@ -11,8 +11,12 @@ import ErrorNode from './ErrorNode'
 export default class Annotate extends Component {
   static propTypes = {
     addNode: PropTypes.func.isRequired,
+    makeSelection: PropTypes.func.isRequired,
+    removeSelection: PropTypes.func.isRequired,
     nodes: PropTypes.arrayOf(
       PropTypes.shape({
+        id: PropTypes.string.isRequired,
+        range: PropTypes.arrayOf(PropTypes.number).isRequired,
         text: PropTypes.string.isRequired,
         type: PropTypes.oneOf(Object.values(nodeTypes)),
         data: PropTypes.object // specific to the node type
@@ -35,7 +39,7 @@ export default class Annotate extends Component {
 
   checkSelected = () => {
     const selection = window.getSelection()
-    this.props.addNode(nodeTypes.SELECTION, selection.anchorOffset, selection.focusOffset)
+    this.props.makeSelection(selection.anchorOffset, selection.focusOffset)
   }
 
   render () {
