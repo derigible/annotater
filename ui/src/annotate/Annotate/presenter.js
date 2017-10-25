@@ -19,10 +19,6 @@ export default class Annotate extends Component {
     text: PropTypes.string.isRequired
   }
 
-  static renderNode (node) {
-    return <Node key={`node_${node.id}`} text={node.text} types={Annotate.getTypes(node.definitionNodes)} />
-  }
-
   static getDefinitionNodes (range, nodes) {
     const definitionNodes = []
     for (let i = 0; i < nodes.length; i++) {
@@ -47,6 +43,11 @@ export default class Annotate extends Component {
     return { nodes, ranges }
   }
 
+  static getNormalizeOffset (selection) {
+    const domNode = selection.baseNode.parentNode.attributes['data-id']
+    return parseInt(domNode.value, 10)
+  }
+
   constructor (props) {
     super(props)
     this.nodeMap = new SortedMap()
@@ -69,15 +70,9 @@ export default class Annotate extends Component {
     if (nextProps.nodes.length !== this.props.nodes.length) {
       // Need to do something here
     } else if (selection.startOffset !== newSelection.startOffset || selection.endOffset !== newSelection.endOffset) { // will never have highlight when creating new node
-      console.log('Before merge')
-      this.nodeMap.map((v,k) => { console.log(k, v)})
       this.mergeNodes(selection)
       // TODO: add nodeTypes.SELECTION too all nodes in selection range?
-      console.log('After merge')
-      this.nodeMap.map((v,k) => { console.log(k, v)})
       this.splitNodes(newSelection)
-      console.log('After split')
-      this.nodeMap.map((v,k) => { console.log(k, v)})
     }
   }
 
@@ -109,22 +104,22 @@ export default class Annotate extends Component {
     return prev.id
   }
 
+  setRef = (id) => (node) => {
+    this[`node_${id}`] = node
+  }
+
   mergeNodes (selection) {
     if (selection.startOffset === undefined) { return } // no selection has been made previously
-    console.log(selection)
     // remove old node selection by merging with node to the left
     const originalStart = this.getClosestStartOffset(selection.startOffset)
     const originalEnd = this.getClosestStartOffset(selection.endOffset)
-    console.log('first merge')
     this.mergeNode(selection.endOffset, originalEnd)
-    console.log('second merge')
     this.mergeNode(selection.startOffset, originalStart)
     this.nodeMap.delete(selection.endOffset)
     if (selection.startOffset !== 0) { this.nodeMap.delete(selection.startOffset) }
   }
 
   mergeNode (nodeKey, originalNodeKey) {
-    console.log(nodeKey, originalNodeKey)
     const dyingNode = this.nodeMap.get(nodeKey)
     const survivingNode = this.nodeMap.get(originalNodeKey)
     this.nodeMap.set(
@@ -179,8 +174,9 @@ export default class Annotate extends Component {
       // Click with no selection, remove selection
       this.setState({ selection: {} })
     } else {
-      const startOffset = selection.anchorOffset
-      const endOffset = selection.focusOffset
+      const normalizeOffset = Annotate.getNormalizeOffset(selection)
+      const startOffset = selection.anchorOffset + normalizeOffset
+      const endOffset = selection.focusOffset + normalizeOffset
       if (startOffset > endOffset) {
         this.setState({ selection: { startOffset: endOffset, endOffset: startOffset } })
       } else {
@@ -196,12 +192,24 @@ export default class Annotate extends Component {
       text: this.props.text.substring(...range),
       definitionNodes
     }
-    node.uiNode = Annotate.renderNode(node)
+    node.uiNode = this.renderNode(node)
     return node
   }
 
   renderNodes () {
     return this.nodeMap.map((node) => node.uiNode)
+  }
+
+  renderNode (node) {
+    return (
+      <Node
+        key={`node_${node.id}`}
+        ref={this.setRef(node.id)}
+        id={node.id}
+        text={node.text}
+        types={Annotate.getTypes(node.definitionNodes)}
+      />
+    )
   }
 
   render () {

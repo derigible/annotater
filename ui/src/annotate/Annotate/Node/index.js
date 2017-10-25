@@ -13,6 +13,7 @@ import theme from './theme'
 @themeable(theme, styles)
 export default class Node extends Component {
   static propTypes = {
+    id: PropTypes.number.isRequired,
     text: PropTypes.string.isRequired,
     types: PropTypes.arrayOf(PropTypes.oneOf(Object.values(nodeTypes))).isRequired
   }
@@ -23,10 +24,11 @@ export default class Node extends Component {
     })
   }
 
+  // add data-id to get the internal node detail so we can normalize range offsets
   render () {
     return (
       <Text>
-        <span className={this.getClassNames()}>
+        <span data-id={this.props.id} className={this.getClassNames()}>
           {this.props.text}
         </span>
       </Text>
