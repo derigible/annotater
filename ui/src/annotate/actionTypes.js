@@ -1,3 +1,3 @@
 export const SET_DOCUMENT_NODES = 'SET_DOCUMENT_NODES'
 export const LOAD_TEXT = 'LOAD_TEXT'
-export const SET_HIGHLIGHT = 'SET_HIGHLIGHT'
+export const CREATE_NODE = 'CREATE_NODE'

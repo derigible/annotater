@@ -1,17 +1,18 @@
 import router from '../app/router'
 
 import * as actions from './actions'
-import * as appActions from '../app/actions' // This will likely change to be an app action
+import * as appActions from '../app/actions'
 import grit from '../grit'
 
+// When submitting text, you must also include its default node
 export function submitText (text) {
   return function (dispatch) {
     dispatch(appActions.setDisplayLoadingSpinner())
+
     return grit.uploadTextDocument(text)
       .then(
         (data) => {
           dispatch(actions.loadText(data.id, data.text))
-          dispatch(actions.setDocumentNodes(data.id, []))
           return data
         },
         (error) => dispatch(appActions.setAlert(error))
@@ -21,7 +22,8 @@ export function submitText (text) {
           router.navigate(`${data.id}`)
           return data
         }
-      ).then(
+      )
+      .then(
         (data) => {
           dispatch(appActions.unsetDisplayLoadingSpinner())
           return data
@@ -30,7 +32,16 @@ export function submitText (text) {
   }
 }
 
-export function submitHighlight (text, range) {}
+export function submitNode (documentId, nodeType, range, data) {
+  return function (dispatch) {
+    return grit.submitNode(documentId, nodeType, range, data).then(
+      (respData) => {
+        dispatch(actions.createNode(documentId, respData.node))
+        return respData
+      }
+    )
+  }
+}
 
 export function fetchNodes (documentId) {
   return function (dispatch) {

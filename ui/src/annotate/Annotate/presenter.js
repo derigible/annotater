@@ -3,6 +3,7 @@ import PropTypes from 'prop-types'
 
 import * as nodeTypes from '../nodeTypes'
 
+import Selection from './Selection'
 import Text from './Text'
 import Highlight from './Highlight'
 import ErrorNode from './ErrorNode'
@@ -23,6 +24,8 @@ export default class Annotate extends Component {
     switch (node.type) {
       case nodeTypes.TEXT:
         return <Text key={`text_node_${node.id}`} node={node} />
+      case nodeTypes.SELECTION:
+        return <Selection key={`selection_node_${node.id}`} node={node} />
       case nodeTypes.HIGHLIGHT:
         return <Highlight key={`text_node_${node.id}`} node={node} />
       default:
@@ -30,9 +33,19 @@ export default class Annotate extends Component {
     }
   }
 
+  checkSelected = () => {
+    const selection = window.getSelection()
+    this.props.addNode(nodeTypes.SELECTION, selection.anchorOffset, selection.focusOffset)
+  }
+
   render () {
     return (
-      <div>
+      <div
+        onBlur={this.checkSelected}
+        onMouseUp={this.checkSelected}
+        onKeyUp={this.checkSelected}
+        onTouchEnd={this.checkSelected}
+      >
         {this.props.nodes.map((node) => Annotate.renderNode(node))}
       </div>
     )

@@ -16,12 +16,10 @@ export const setDocumentNodes = (id, nodes) => {
   }
 }
 
-export const setHighlight = (id, textIndex, unHighlightedText, highlightedText) => {
+export const createNode = (documentId, node) => {
   return {
-    type: actionTypes.LOAD_TEXT,
-    id,
-    textIndex,
-    unHighlightedText,
-    highlightedText
+    type: actionTypes.CREATE_NODE,
+    documentId,
+    node
   }
 }

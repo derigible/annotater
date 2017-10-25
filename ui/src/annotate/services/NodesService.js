@@ -6,6 +6,7 @@ import * as nodeTypes from '../nodeTypes'
  *
  * Nodes from persistence will have a schema as follows:
  * {
+ *   id: <string>,
  *   range: [<offset>, <length>],
  *   type: oneOf(Annotate.nodeTypes)
  *   data: {
@@ -16,19 +17,30 @@ import * as nodeTypes from '../nodeTypes'
  * AnnotationNodes
  */
 export default class NodesService {
-  constructor (text, nodes) {
-    this.originalNodes = nodes
-    this.text = text
-    this.annotationNodes = []
-    this.$$hasGenerated = false
+  constructor () {
+    this.needsSorting = true
+    this.theNodes = {}
   }
 
   get nodes () {
-    return this.annotationNodes
+    if (this.needsSorting) {
+      this.sortedNodes = NodesService.sortNodes(Object.values(this.theNodes))
+      this.needsSorting = false
+    }
+    return this.sortedNodes
   }
 
-  createNode (data) {
+  get text () {
+    return this.theText
+  }
+
+  set text (text) {
+    this.theText = text
+  }
+
+  createUiNode (data) {
     return {
+      id: data.id,
       text: this.text.substring(...data.range),
       type: NodesService.validateAndGetNodeType(data.type),
       data: data.data
@@ -40,26 +52,26 @@ export default class NodesService {
     return type
   }
 
-  generate () {
-    if (this.$$hasGenerated) { throw new Error('Cannot generate - already generated.') }
-    this.originalNodes.forEach((node) => {
-      this.annotationNodes.push(this.createNode(node))
-    })
-    if (this.nodes.length === 0) {
-      this.annotationNodes.push(
-        this.createNode({
-          range: [0, this.text.length],
-          type: nodeTypes.TEXT,
-          data: {
-            color: 'default',
-            size: 'default'
-          }
-        })
-      )
-    }
+  static sortNodes (nodes) {
+    return nodes.sort((nodea, nodeb) => nodea.range[0] - nodeb.range[0])
   }
 
-  addNode (data) {
-    this.annotationNodes.push(data)
+  // Will add all new nodes. If none are new, does nothing
+  addNodesFromNodes (nodes) {
+    let hasTemp = false
+    console.log(nodes)
+    nodes.forEach((node) => {
+      const exists = this.theNodes[node.id]
+      if (!exists) {
+        this.theNodes[node.id] = this.createUiNode(node)
+        this.needsSorting = true
+      }
+      if (node.id === nodeTypes.SELECTION) {
+        hasTemp = true
+      }
+    })
+    if (!hasTemp) {
+      delete this.theNodes[nodeTypes.SELECTION] // selection node needs to go away
+    }
   }
 }

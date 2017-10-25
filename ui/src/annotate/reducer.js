@@ -6,16 +6,12 @@ const initialState = {}
 
 export default function (state = initialState, action) {
   switch (action.type) {
-    case actionTypes.SET_HIGHLIGHT:
+    case actionTypes.CREATE_NODE:
       return update(state,
         {
-          [action.id]: {
+          [action.documentId]: {
             nodes: {
-              $splice: [
-                // Remove the old text and replace with the text that wasn't highlighted
-                // followed by a node of the highlighted text
-                [action.textIndex, 1, action.unHighlightedText, action.highlightedText]
-              ]
+              $push: [action.node]
             }
           }
         }

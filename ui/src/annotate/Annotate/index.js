@@ -9,10 +9,6 @@ import NodesService from '../services/NodesService'
 
 import Annotate from './presenter'
 
-const PENDING = 'PENDING'
-const COMPUTING = 'COMPUTING'
-const COMPUTED = 'COMPUTED'
-
 class AnnotateDataWrapper extends Component {
   static propTypes = {
     documentId: PropTypes.string.isRequired,
@@ -20,12 +16,15 @@ class AnnotateDataWrapper extends Component {
     fetchText: PropTypes.func.isRequired,
     nodes: PropTypes.arrayOf(
       PropTypes.shape({
-        text: PropTypes.string.isRequired,
-        type: PropTypes.oneOf(Object.values(nodeTypes))
+        id: PropTypes.string.isRequired,
+        range: PropTypes.arrayOf(PropTypes.number).isRequired,
+        type: PropTypes.oneOf(Object.values(nodeTypes)),
+        data: PropTypes.object
       })
     ),
     nodesReceived: PropTypes.bool,
     setDisplayLoadingSpinner: PropTypes.func.isRequired,
+    submitNode: PropTypes.func.isRequired,
     text: PropTypes.string,
     unsetDisplayLoadingSpinner: PropTypes.func.isRequired
   }
@@ -36,29 +35,28 @@ class AnnotateDataWrapper extends Component {
     nodesReceived: false
   }
 
-  state = {
-    computingNodes: PENDING
-  }
-
   componentDidMount () {
+    this.nodesService = new NodesService()
     this.props.setDisplayLoadingSpinner()
     if (this.props.text === null) {
       this.props.fetchText(this.props.documentId)
+    } else {
+      this.nodesService.text = this.props.text
     }
     if (!this.props.nodesReceived) {
       this.props.fetchNodes(this.props.documentId)
     }
-    if (!this.isLoading) {
-      this.computeNodes()
+  }
+
+  componentWillUpdate (nextProps) {
+    if (this.props.text === null && nextProps.text !== null) {
+      this.nodesService.text = nextProps.text
     }
   }
 
   componentDidUpdate (prevProps, prevState) {
-    if (this.state.computingNodes === COMPUTED && prevState.computingNodes === COMPUTING) {
+    if (!this.isLoading) {
       this.props.unsetDisplayLoadingSpinner()
-    }
-    if (!this.isLoading && this.state.computingNodes === PENDING) {
-      this.computeNodes()
     }
   }
 
@@ -67,28 +65,26 @@ class AnnotateDataWrapper extends Component {
       !this.props.nodesReceived
   }
 
-  get nodesGenerated () {
-    return this.state.computingNodes === COMPUTED
+  addNode = (type, startOffset, endOffset) => {
+    const { documentId } = this.props
+    this.props.submitNode(
+      documentId,
+      type,
+      [startOffset, endOffset - startOffset]
+    )
   }
 
-  computeNodes () {
-    this.setState({ computingNodes: COMPUTING })
-    setTimeout(() => {
-      this.nodesService = new NodesService(this.props.text, this.props.nodes)
-      this.nodesService.generate()
-      this.setState({
-        computingNodes: COMPUTED
-      })
-    })
-  }
+  // Note that there is changing nodes, just replace on write
+  changeNode
 
   render () {
-    if (this.isLoading || !this.nodesGenerated) {
+    if (this.isLoading) {
       return <div />
     }
+    this.nodesService.addNodesFromNodes(this.props.nodes)
     return (
       <Annotate
-        addNode={this.nodesService.addNode}
+        addNode={this.addNode}
         nodes={this.nodesService.nodes}
       />
     )
@@ -105,6 +101,7 @@ const mapStateToProps = (store, props) => {
 }
 
 const mapDispatchToProps = {
+  submitNode: persistence.submitNode,
   fetchNodes: persistence.fetchNodes,
   fetchText: persistence.fetchText,
   setDisplayLoadingSpinner: appActions.setDisplayLoadingSpinner,

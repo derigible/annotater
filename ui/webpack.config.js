@@ -43,6 +43,11 @@ Object.assign(exports, {
     }
   },
   module: {
+    noParse: [
+      /jquery\/dist\/jquery/,
+      /lodash\/lodash/,
+      /tinymce\/tinymce/ // has 'require' and 'define' but they are from it's own internal closure
+    ],
     // eslint-disable-next-line global-require
     rules: [
       {
@@ -58,7 +63,34 @@ Object.assign(exports, {
           }
         ]
       },
-      ...require('@instructure/ui-presets/webpack/module/rules')
+      ...require('@instructure/ui-presets/webpack/module/rules'),
+      {
+        test: /\.png$/,
+        use: [{
+          loader: 'url-loader',
+          query: {
+            mimetype: 'image/png'
+          }
+        }]
+      },
+      {
+        test: /\.woff(2)?(\?v=[0-9]\.[0-9]\.[0-9])?$/,
+        use: [{
+          loader: 'url-loader',
+          query: {
+            limit: 10000,
+            mimetype: 'application/font-woff'
+          }
+        }]
+      },
+      {
+        test: /\.(gif|jpe?g)$/,
+        use: 'url-loader'
+      },
+      {
+        test: /\.(ttf|eot|svg|otf)(\?v=[0-9]\.[0-9]\.[0-9])?$/,
+        use: 'file-loader'
+      }
     ]
   },
   plugins: [

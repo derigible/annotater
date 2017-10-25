@@ -1,24 +1,22 @@
 import React, { Component } from 'react'
 import PropTypes from 'prop-types'
 
-import TextFormat from '@instructure/ui-core/lib/components/Text'
+import { SELECTION } from '../../nodeTypes'
 
-import { TEXT } from '../../nodeTypes'
-
-export default class Text extends Component {
+export default class Selection extends Component {
   static propTypes = {
     node: PropTypes.shape({
       id: PropTypes.string.isRequired,
       text: PropTypes.string.isRequired,
-      type: PropTypes.oneOf([TEXT])
+      type: PropTypes.oneOf([SELECTION])
     }).isRequired
   }
 
   render () {
     return (
-      <TextFormat>
+      <span style={{ backgroundColor: 'red' }}>
         {this.props.node.text}
-      </TextFormat>
+      </span>
     )
   }
 }
