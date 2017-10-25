@@ -120,7 +120,7 @@ export default class Annotate extends Component {
     console.log('second merge')
     this.mergeNode(selection.startOffset, originalStart)
     this.nodeMap.delete(selection.endOffset)
-    this.nodeMap.delete(selection.startOffset)
+    if (selection.startOffset !== 0) { this.nodeMap.delete(selection.startOffset) }
   }
 
   mergeNode (nodeKey, originalNodeKey) {
@@ -175,7 +175,6 @@ export default class Annotate extends Component {
 
   checkSelected = () => {
     const selection = window.getSelection()
-    console.log(selection)
     if (selection.anchorOffset === selection.focusOffset) {
       // Click with no selection, remove selection
       this.setState({ selection: {} })
