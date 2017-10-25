@@ -2,7 +2,7 @@ import React, { Component } from 'react'
 import PropTypes from 'prop-types'
 import classnames from 'classnames'
 
-import TextFormat from '@instructure/ui-core/lib/components/Text'
+import Text from '@instructure/ui-core/lib/components/Text'
 import themeable from '@instructure/ui-themeable'
 
 import * as nodeTypes from '../../nodeTypes'
@@ -18,7 +18,7 @@ export default class Node extends Component {
   }
 
   getClassNames () {
-    console.log(this.props.types)
+    console.log(this.props.types.includes(nodeTypes.SELECTION))
     return classnames({
       [styles.selection]: this.props.types.includes(nodeTypes.SELECTION)
     })
@@ -26,11 +26,11 @@ export default class Node extends Component {
 
   render () {
     return (
-      <TextFormat>
+      <Text>
         <span className={this.getClassNames()}>
           {this.props.text}
         </span>
-      </TextFormat>
+      </Text>
     )
   }
 }

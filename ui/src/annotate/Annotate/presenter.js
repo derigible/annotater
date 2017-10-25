@@ -2,6 +2,7 @@ import React, { Component } from 'react'
 import PropTypes from 'prop-types'
 import SortedMap from 'collections/sorted-map'
 import SortedSet from 'collections/sorted-set'
+import findIndex from 'lodash/findIndex'
 
 import ScreenReaderContent from '@instructure/ui-core/lib/components/ScreenReaderContent'
 
@@ -68,7 +69,7 @@ export default class Annotate extends Component {
     if (nextProps.nodes.length !== this.props.nodes.length) {
       // Need to do something here
     } else if (selection.startOffset !== newSelection.startOffset || selection.endOffset !== newSelection.endOffset) { // will never have highlight when creating new node
-      // remove old node selection
+      // TODO: remove old node selection
 
       // find closest start offset to split the node
       const startNodeKey = this.getClosestStartOffset(newSelection)
@@ -81,7 +82,7 @@ export default class Annotate extends Component {
         this.splitNode(startNodeKey, newSelection.startOffset)
         // the new startOffset has now been created as a node, we will
         // need to split that node to account for the unhighlighted portion
-        this.splitNode(newSelection.startOffset, newSelection.endOffset)
+        this.splitNode(newSelection.startOffset, newSelection.endOffset, false, true)
       }
     }
   }
@@ -114,18 +115,22 @@ export default class Annotate extends Component {
     return prev.id
   }
 
-  splitNode (nodeKey, splitOffset, changeOnRight = false) {
+  splitNode (nodeKey, splitOffset, selectionOnRight = true, removeSelection = false) {
     const toSplit = this.nodeMap.get(nodeKey)
 
     let leftNodeDefinitions = toSplit.definitionNodes
-    if (!changeOnRight) {
+    // If removeSelection is true, means that the node on left already has selection
+    if (!selectionOnRight && !removeSelection) {
       leftNodeDefinitions = leftNodeDefinitions.concat([{ type: nodeTypes.SELECTION }])
     }
     const leftNode = this.createNode([nodeKey, splitOffset], leftNodeDefinitions)
 
     let rightNodeDefinitions = toSplit.definitionNodes
-    if (changeOnRight) {
+    if (selectionOnRight) {
       rightNodeDefinitions = rightNodeDefinitions.concat([{ type: nodeTypes.SELECTION }])
+    } else if (removeSelection) {
+      const index = findIndex(rightNodeDefinitions, (n) => n.type === nodeTypes.SELECTION)
+      rightNodeDefinitions.splice(index, 1)
     }
     const rightNode = this.createNode([splitOffset, toSplit.range[1]], rightNodeDefinitions)
 
