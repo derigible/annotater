@@ -22,15 +22,6 @@ export default class Annotate extends Component {
     return <Node key={`node_${node.id}`} text={node.text} types={Annotate.getTypes(node.definitionNodes)} />
   }
 
-  static nodesEqual (nodeA, nodeB) {
-    return nodeA.range[0] === nodeB.range[0] && nodeA.range[1] === nodeB.range[1]
-  }
-
-  static compareNodes (nodeA, nodeB) {
-    console.log(nodeA, nodeB)
-    return nodeA.range[0] - nodeB.range[0]
-  }
-
   static getDefinitionNodes (range, nodes) {
     const definitionNodes = []
     for (let i = 0; i < nodes.length; i++) {
@@ -83,12 +74,15 @@ export default class Annotate extends Component {
       const startNodeKey = this.getClosestStartOffset(newSelection)
       // find closest end offset to possibly split the node
       const endNodeKey = this.getClosestEndOffsetNodeKey(newSelection)
-      // determine if the node needs to be split, and split if it does
       if (startNodeKey !== endNodeKey) {
+        this.splitNode(startNodeKey, newSelection.startOffset)
         this.splitNode(endNodeKey, newSelection.endOffset)
+      } else {
+        this.splitNode(startNodeKey, newSelection.startOffset)
+        // the new startOffset has now been created as a node, we will
+        // need to split that node to account for the unhighlighted portion
+        this.splitNode(newSelection.startOffset, newSelection.endOffset)
       }
-      // split the start node
-      this.splitNode(startNodeKey, newSelection.startOffset)
     }
   }
 
@@ -134,8 +128,6 @@ export default class Annotate extends Component {
       rightNodeDefinitions = rightNodeDefinitions.concat([{ type: nodeTypes.SELECTION }])
     }
     const rightNode = this.createNode([splitOffset, toSplit.range[1]], rightNodeDefinitions)
-
-    console.log(nodeKey, splitOffset)
 
     this.nodeMap.set(nodeKey, leftNode)
     this.nodeMap.set(splitOffset, rightNode)
