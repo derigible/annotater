@@ -19,6 +19,7 @@ import theme from './theme'
 export default class Node extends Component {
   static propTypes = {
     id: PropTypes.number.isRequired,
+    cancelSelection: PropTypes.func.isRequired,
     text: PropTypes.string.isRequired,
     types: PropTypes.arrayOf(PropTypes.oneOf(Object.values(nodeTypes))).isRequired
   }
@@ -41,14 +42,15 @@ export default class Node extends Component {
   renderWithPopover () {
     return (
       <Popover
-        on="click"
-        shouldContainFocus
-        shouldReturnFocus
-        closeButtonLabel="Close"
         applicationElement={() => document.getElementById('app')}
+        closeButtonLabel="Close"
         defaultShow
         label="Popover Dialog Example"
         offsetY="16px"
+        on="click"
+        onToggle={this.props.cancelSelection}
+        shouldContainFocus
+        shouldReturnFocus
       >
         <PopoverTrigger>
           <Link variant="inverse">

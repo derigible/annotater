@@ -79,9 +79,13 @@ export default class Annotate extends Component {
       window.getSelection().removeAllRanges()
       // TODO: filter out all nodes in nodemap caught in between
       // this range offset and only render the select node
-      setTimeout(() => {
-        this[`node_${newSelection.startOffset}`].showTypeMenu()
-      })
+      if (newSelection.startOffset) {
+        // Only fire the timeout if the selection exists
+        setTimeout(() => {
+          this[`node_${newSelection.startOffset}`].showTypeMenu()
+        })
+      }
+
     }
   }
 
@@ -203,6 +207,10 @@ export default class Annotate extends Component {
     return node
   }
 
+  cancelSelection = () => {
+    this.setState({ selection: {} })
+  }
+
   renderNodes () {
     return this.nodeMap.map((node) => node.uiNode)
   }
@@ -213,6 +221,7 @@ export default class Annotate extends Component {
         key={`node_${node.id}`}
         ref={this.setRef(node.id)}
         id={node.id}
+        cancelSelection={this.cancelSelection}
         text={node.text}
         types={Annotate.getTypes(node.definitionNodes)}
       />
