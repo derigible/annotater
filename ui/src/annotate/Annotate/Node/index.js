@@ -8,6 +8,7 @@ import FormFieldGroup from '@instructure/ui-core/lib/components/FormFieldGroup'
 import Grid, { GridCol, GridRow } from '@instructure/ui-core/lib/components/Grid'
 import Heading from '@instructure/ui-core/lib/components/Heading'
 import Link from '@instructure/ui-core/lib/components/Link'
+import List, { ListItem } from '@instructure/ui-core/lib/components/List'
 import Popover, { PopoverContent, PopoverTrigger } from '@instructure/ui-core/lib/components/Popover'
 import ScreenReaderContent from '@instructure/ui-core/lib/components/ScreenReaderContent'
 import Select from '@instructure/ui-core/lib/components/Select'
@@ -31,6 +32,7 @@ export default class Node extends Component {
     node: PropTypes.shape({
       id: PropTypes.number.isRequired,
       range: PropTypes.arrayOf(PropTypes.number),
+      selectionRange: PropTypes.arrayOf(PropTypes.number),
       text: PropTypes.string.isRequired,
       definitionNodes: PropTypes.arrayOf(nodeDefinition)
     }).isRequired
@@ -43,8 +45,12 @@ export default class Node extends Component {
 
   static renderColorOptions () {
     return Object.values(colors).map((color) => {
-      return <option key={color} value={color}>{capitalizeFirstLetter(color.toLowerCase())}</option>
+      return <option key={color} value={color}>{Node.normalizeText(color)}</option>
     })
+  }
+
+  static normalizeText (text) {
+    return capitalizeFirstLetter(text.toLowerCase())
   }
 
   state = {
@@ -70,13 +76,13 @@ export default class Node extends Component {
         classes.add(styles[defNode.type.toLowerCase()])
       }
     })
-    return classnames(classes.toArray())
+    return classes.length > 1 ? styles.mixedTags : classnames(classes.toArray())
   }
 
   createNode = (type, data) => {
     const { node } = this.props
     this.setState({ show: false })
-    this.props.createAnnotation(type, node.range, data)
+    this.props.createAnnotation(type, node.selectionRange, data)
   }
 
   createTag = () => {
@@ -157,14 +163,72 @@ export default class Node extends Component {
     )
   }
 
-  renderContent () {
+  renderMultiTypePopover () {
+    const renderTypesOnNode = () => {
+      return (
+        <List>
+          {
+            new Set(this.props.node.definitionNodes).toArray().map((dn) => {
+              return (
+                <ListItem key={dn.type}>
+                  <Text>
+                    {Node.normalizeText(dn.type)}
+                  </Text>
+                </ListItem>
+              )
+            })
+          }
+        </List>
+      )
+    }
+    return (
+      <Popover
+        applicationElement={() => document.getElementById('app')}
+        closeButtonLabel="Close"
+        label="Display of Types of Annotations"
+        offsetX={this.props.node.text.length < 3 ? '16px' : undefined}
+        on="click"
+        shouldContainFocus
+        shouldReturnFocus
+      >
+        <PopoverTrigger as="span">
+          <Link variant="inverse">
+            {this.renderPlainTextNode()}
+          </Link>
+        </PopoverTrigger>
+        <PopoverContent>
+          <Container margin="small x-large small small" padding="none" display="block" as="form">
+            <FormFieldGroup
+              description={<ScreenReaderContent>Annotations</ScreenReaderContent>}
+              layout="stacked"
+              rowSpacing="small"
+            >
+              <Heading level="h3" as="h1">Annotations</Heading>
+              {renderTypesOnNode()}
+            </FormFieldGroup>
+          </Container>
+        </PopoverContent>
+      </Popover>
+    )
+  }
+
+  renderPlainTextNode () {
+    /* eslint-disable react/no-danger */
     return (
       <Text>
-        <span data-id={this.props.node.id} className={this.getClassNames()}>
-          {this.props.node.text}
-        </span>
+        <span
+          data-id={this.props.node.id}
+          className={this.getClassNames()}
+          dangerouslySetInnerHTML={{ __html: this.props.node.text }}
+        />
       </Text>
     )
+  }
+
+  renderContent () {
+    return this.props.node.definitionNodes.length > 1 ?
+      this.renderMultiTypePopover() :
+      this.renderPlainTextNode()
   }
 
   // add data-id to get the internal node detail so we can normalize range offsets

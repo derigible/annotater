@@ -4,6 +4,8 @@ export default function generator ({ colors, spacing }) {
     higlightGreen: colors.shamrock,
     higlightRed: colors.crimson,
     higlightYellow: '#ffe100',
+    mixedTagsBackground: colors.ash,
+    mixedTagsTextColor: colors.white,
     popoverContainerMargin: spacing.medium,
     selectionBackgroundColor: colors.fire,
     tagBackgroundColor: colors.barney

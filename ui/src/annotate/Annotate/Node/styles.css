@@ -25,3 +25,9 @@
 .yellow {
   background-color: var(--higlightYellow);
 }
+
+.mixedTags {
+  background-color: var(--mixedTagsBackground);
+  color: var(--mixedTagsTextColor);
+  cursor: pointer;
+}

@@ -23,7 +23,16 @@ export default class Annotate extends Component {
     const definitionNodes = []
     for (let i = 0; i < nodes.length; i++) {
       const node = nodes[i]
-      if (node.range[0] <= range[0] && node.range[1] >= range[1]) {
+      if (
+        // initial condition - start of Component node is after persist start
+        node.range[0] <= range[0] &&
+        // case: persist end is before Component end but after Component start
+        (
+          (node.range[1] <= range[1] && node.range[1] > range[0]) ||
+          // case: persist end is after Component end
+          node.range[1] > range[0]
+        )
+      ) {
         definitionNodes.push(node)
       } else if (node.range[0] > range[0]) {
         return definitionNodes // short cicruit - none of the nodes after this are in range
@@ -44,8 +53,10 @@ export default class Annotate extends Component {
   }
 
   static getNormalizeOffset (selection) {
-    const startOffset = parseInt(selection.baseNode.parentNode.attributes['data-id'].value, 10)
-    const endNode = selection.focusNode.parentNode.attributes['data-id']
+    const baseNode = Annotate.recursivelyFindContainingComponent(selection.baseNode.parentNode)
+    const focusNode = Annotate.recursivelyFindContainingComponent(selection.focusNode.parentNode)
+    const startOffset = parseInt(baseNode.attributes['data-id'].value, 10)
+    const endNode = focusNode.attributes['data-id']
     return {
       normalizeStartOffset: startOffset,
       // if endNode is not defined, means drag ended on the end of the same node as start (may
@@ -53,6 +64,14 @@ export default class Annotate extends Component {
       // revisit)
       normalizeEndOffset: endNode ? parseInt(endNode.value, 10) : (selection.baseNode.length - 1 || 1)
     }
+  }
+
+  static recursivelyFindContainingComponent (domNode) {
+    if (domNode === undefined) { return null }
+    if (domNode.attributes['data-id'] === undefined) {
+      return Annotate.recursivelyFindContainingComponent(domNode.parentNode)
+    }
+    return domNode
   }
 
   static createSelectionNode () {
@@ -154,22 +173,43 @@ export default class Annotate extends Component {
 
   splitNodes (newSelection) {
     if (newSelection.startOffset === undefined) { return } // selection was removed on this update
+    const newSelectionRange = [newSelection.startOffset, newSelection.endOffset]
     // find closest start offset to split/merge the node
     const startNodeKey = this.getClosestStartOffset(newSelection.startOffset)
     // find closest end offset to possibly split the node
     const endNodeKey = this.getClosestStartOffset(newSelection.endOffset)
     if (startNodeKey !== endNodeKey) {
-      this.splitNode(startNodeKey, newSelection.startOffset)
-      this.splitNode(endNodeKey, newSelection.endOffset, false, true)
+      this.splitNode(
+        startNodeKey,
+        newSelection.startOffset,
+        newSelectionRange
+      )
+      this.splitNode(
+        endNodeKey,
+        newSelection.endOffset,
+        newSelectionRange,
+        false,
+        true
+      )
     } else {
-      this.splitNode(startNodeKey, newSelection.startOffset)
+      this.splitNode(
+        startNodeKey,
+        newSelection.startOffset,
+        newSelectionRange
+      )
       // the new startOffset has now been created as a node, we will
       // need to split that node to apply the end node correctly
-      this.splitNode(newSelection.startOffset, newSelection.endOffset, false, true)
+      this.splitNode(
+        newSelection.startOffset,
+        newSelection.endOffset,
+        newSelectionRange,
+        false,
+        true
+      )
     }
   }
 
-  splitNode (nodeKey, splitOffset, selectionOnRight = true, removeSelection = false) {
+  splitNode (nodeKey, splitOffset, selectionRange, selectionOnRight = true, removeSelection = false) {
     const toSplit = this.nodeMap.get(nodeKey)
 
     let leftNodeDefinitions = toSplit.definitionNodes
@@ -177,7 +217,7 @@ export default class Annotate extends Component {
     if (!selectionOnRight && removeSelection) {
       leftNodeDefinitions = leftNodeDefinitions.concat([Annotate.createSelectionNode()])
     }
-    const leftNode = this.createNode([nodeKey, splitOffset], leftNodeDefinitions)
+    const leftNode = this.createNode([nodeKey, splitOffset], leftNodeDefinitions, selectionRange)
 
     let rightNodeDefinitions = toSplit.definitionNodes
     if (selectionOnRight) {
@@ -185,7 +225,7 @@ export default class Annotate extends Component {
     } else if (removeSelection) {
       rightNodeDefinitions = Annotate.removeSelectionType(rightNodeDefinitions)
     }
-    const rightNode = this.createNode([splitOffset, toSplit.range[1]], rightNodeDefinitions)
+    const rightNode = this.createNode([splitOffset, toSplit.range[1]], rightNodeDefinitions, selectionRange)
 
     this.nodeMap.set(nodeKey, leftNode)
     this.nodeMap.set(splitOffset, rightNode)
@@ -193,6 +233,7 @@ export default class Annotate extends Component {
 
   checkSelected = () => {
     const selection = window.getSelection()
+    console.log(selection)
     const { normalizeStartOffset, normalizeEndOffset } = Annotate.getNormalizeOffset(selection)
     const startOffset = selection.anchorOffset + normalizeStartOffset
     const endOffset = selection.focusOffset + normalizeEndOffset
@@ -206,10 +247,11 @@ export default class Annotate extends Component {
     }
   }
 
-  createNode = (range, definitionNodes) => {
+  createNode = (range, definitionNodes, selectionRange = []) => {
     const node = {
       id: range[0],
       range,
+      selectionRange,
       text: this.props.text.substring(...range),
       definitionNodes
     }
