@@ -53,6 +53,10 @@ export default class Node extends Component {
     return capitalizeFirstLetter(text.toLowerCase())
   }
 
+  static getTypes (nodes) {
+    return nodes.map((n) => n.type).filter((type) => type !== nodeTypes.TEXT)
+  }
+
   state = {
     showTypeMenu: false,
     show: true
@@ -163,24 +167,26 @@ export default class Node extends Component {
     )
   }
 
+  renderTypesOnNode () {
+    const types = new Set(Node.getTypes(this.props.node.definitionNodes))
+    return (
+      <List>
+        {
+          types.toArray().map((type) => {
+            return (
+              <ListItem key={type}>
+                <Text>
+                  {Node.normalizeText(type)}
+                </Text>
+              </ListItem>
+            )
+          })
+        }
+      </List>
+    )
+  }
+
   renderMultiTypePopover () {
-    const renderTypesOnNode = () => {
-      return (
-        <List>
-          {
-            new Set(this.props.node.definitionNodes).toArray().map((dn) => {
-              return (
-                <ListItem key={dn.type}>
-                  <Text>
-                    {Node.normalizeText(dn.type)}
-                  </Text>
-                </ListItem>
-              )
-            })
-          }
-        </List>
-      )
-    }
     return (
       <Popover
         applicationElement={() => document.getElementById('app')}
@@ -204,7 +210,7 @@ export default class Node extends Component {
               rowSpacing="small"
             >
               <Heading level="h3" as="h1">Annotations</Heading>
-              {renderTypesOnNode()}
+              {this.renderTypesOnNode()}
             </FormFieldGroup>
           </Container>
         </PopoverContent>
