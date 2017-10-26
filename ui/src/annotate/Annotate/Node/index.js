@@ -41,10 +41,6 @@ export default class Node extends Component {
     createAnnotation: () => {}
   }
 
-  static getTypes (nodes) {
-    return nodes.map((n) => n.type)
-  }
-
   static renderColorOptions () {
     return Object.values(colors).map((color) => {
       return <option key={color} value={color}>{capitalizeFirstLetter(color.toLowerCase())}</option>
@@ -56,22 +52,39 @@ export default class Node extends Component {
     show: true
   }
 
+  setSelectRef = (node) => {
+    this.highlightColorSelect = node
+  }
+
   setTagRef = (node) => {
     this.tagInput = node
   }
 
   getClassNames () {
-    const types = Node.getTypes(this.props.node.definitionNodes)
-    return classnames({
-      [styles.selection]: types.includes(nodeTypes.SELECTION),
-      [styles.tag]: types.includes(nodeTypes.TAG)
+    const classes = new Set()
+    this.props.node.definitionNodes.forEach((defNode) => {
+      if (defNode.type === nodeTypes.TEXT) { return }
+      if (defNode.type === nodeTypes.HIGHLIGHT) {
+        classes.add(styles[defNode.data.color.toLowerCase()])
+      } else {
+        classes.add(styles[defNode.type.toLowerCase()])
+      }
     })
+    return classnames(classes.toArray())
+  }
+
+  createNode = (type, data) => {
+    const { node } = this.props
+    this.setState({ show: false })
+    this.props.createAnnotation(type, node.range, data)
   }
 
   createTag = () => {
-    const { node } = this.props
-    this.setState({ show: false })
-    this.props.createAnnotation(nodeTypes.TAG, node.range, { label: this.tagInput.value })
+    this.createNode(nodeTypes.TAG, { label: this.tagInput.value })
+  }
+
+  createHighlight = () => {
+    this.createNode(nodeTypes.HIGHLIGHT, { color: this.highlightColorSelect.value })
   }
 
   showTypeMenu = () => {
@@ -120,6 +133,7 @@ export default class Node extends Component {
                       layout="inline"
                       label={<ScreenReaderContent>Select Highlight Color</ScreenReaderContent>}
                       width="15rem"
+                      ref={this.setSelectRef}
                     >
                       {Node.renderColorOptions()}
                     </Select>
@@ -132,7 +146,7 @@ export default class Node extends Component {
                     rowSpacing="small"
                   >
                     <Button onClick={this.createTag} fluidWidth variant="primary">Tag</Button>
-                    <Button fluidWidth variant="primary">Highlight</Button>
+                    <Button onClick={this.createHighlight} fluidWidth variant="primary">Highlight</Button>
                   </FormFieldGroup>
                 </GridCol>
               </GridRow>

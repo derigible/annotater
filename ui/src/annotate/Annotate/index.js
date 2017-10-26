@@ -50,7 +50,6 @@ class AnnotateDataWrapper extends Component {
 
   createAnnotation = (type, range, data) => {
     const { documentId } = this.props
-    console.log(documentId, type, range, data)
     this.props.submitNode(
       documentId,
       type,

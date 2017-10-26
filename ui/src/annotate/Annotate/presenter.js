@@ -63,6 +63,11 @@ export default class Annotate extends Component {
     }
   }
 
+  static removeSelectionType (nodeDefinitions) {
+    const index = findIndex(nodeDefinitions, (n) => n.type === nodeTypes.SELECTION)
+    return update(nodeDefinitions, { $splice: [[index, 1]] })
+  }
+
   constructor (props) {
     super(props)
     this.nodeMap = new SortedMap()
@@ -83,7 +88,6 @@ export default class Annotate extends Component {
       selection.startOffset !== newSelection.startOffset ||
       selection.endOffset !== newSelection.endOffset
     ) {
-      console.log(selection, newSelection)
       this.mergeNodes(selection)
       this.splitNodes(newSelection)
       window.getSelection().removeAllRanges()
@@ -109,21 +113,6 @@ export default class Annotate extends Component {
     return prev
   }
 
-  getClosestEndOffsetNodeKey (endOffset) {
-    const values = Array.from(this.nodeMap.values())
-    let prev = values[0]
-    // TODO: O(N) time. Can do better (possible performance issue)
-    for (let i = 1; i < this.nodeMap.length; i++) {
-      // if endOffset is less than the nodes endoffset but greater than the id
-      // (startoffset of the node) then return node id
-      if (values[i].range[1] > endOffset && endOffset > values[i].id) {
-        return values[i].id
-      }
-      prev = values[i]
-    }
-    return prev.id
-  }
-
   setRef = (id) => (node) => {
     this[`node_${id}`] = node
   }
@@ -145,15 +134,18 @@ export default class Annotate extends Component {
     // remove old node selection by merging with node to the left
     const originalStart = this.getClosestStartOffset(selection.startOffset)
     const originalEnd = this.getClosestStartOffset(selection.endOffset)
-    this.mergeNode(selection.endOffset, originalEnd)
+    this.mergeNode(selection.endOffset, originalEnd, true)
     this.mergeNode(selection.startOffset, originalStart)
     this.nodeMap.delete(selection.endOffset)
     if (selection.startOffset !== 0) { this.nodeMap.delete(selection.startOffset) }
   }
 
-  mergeNode (nodeKey, originalNodeKey) {
+  mergeNode (nodeKey, originalNodeKey, removeSelectionType) {
     const dyingNode = this.nodeMap.get(nodeKey)
     const survivingNode = this.nodeMap.get(originalNodeKey)
+    if (removeSelectionType) {
+      survivingNode.definitionNodes = Annotate.removeSelectionType(survivingNode.definitionNodes)
+    }
     this.nodeMap.set(
       originalNodeKey,
       this.createNode([originalNodeKey, dyingNode.range[1]], survivingNode.definitionNodes)
@@ -165,11 +157,10 @@ export default class Annotate extends Component {
     // find closest start offset to split/merge the node
     const startNodeKey = this.getClosestStartOffset(newSelection.startOffset)
     // find closest end offset to possibly split the node
-    const endNodeKey = this.getClosestEndOffsetNodeKey(newSelection.endOffset)
-    console.log(startNodeKey, endNodeKey, Array.from(this.nodeMap.keys()))
+    const endNodeKey = this.getClosestStartOffset(newSelection.endOffset)
     if (startNodeKey !== endNodeKey) {
       this.splitNode(startNodeKey, newSelection.startOffset)
-      this.splitNode(endNodeKey, newSelection.endOffset)
+      this.splitNode(endNodeKey, newSelection.endOffset, false, true)
     } else {
       this.splitNode(startNodeKey, newSelection.startOffset)
       // the new startOffset has now been created as a node, we will
@@ -183,7 +174,7 @@ export default class Annotate extends Component {
 
     let leftNodeDefinitions = toSplit.definitionNodes
     // If removeSelection is true, means that the node on left already has selection
-    if (!selectionOnRight && !removeSelection) {
+    if (!selectionOnRight && removeSelection) {
       leftNodeDefinitions = leftNodeDefinitions.concat([Annotate.createSelectionNode()])
     }
     const leftNode = this.createNode([nodeKey, splitOffset], leftNodeDefinitions)
@@ -192,8 +183,7 @@ export default class Annotate extends Component {
     if (selectionOnRight) {
       rightNodeDefinitions = rightNodeDefinitions.concat([Annotate.createSelectionNode()])
     } else if (removeSelection) {
-      const index = findIndex(rightNodeDefinitions, (n) => n.type === nodeTypes.SELECTION)
-      rightNodeDefinitions = update(rightNodeDefinitions, { $splice: [[index, 1]] })
+      rightNodeDefinitions = Annotate.removeSelectionType(rightNodeDefinitions)
     }
     const rightNode = this.createNode([splitOffset, toSplit.range[1]], rightNodeDefinitions)
 
@@ -208,7 +198,7 @@ export default class Annotate extends Component {
     const endOffset = selection.focusOffset + normalizeEndOffset
     if (startOffset === endOffset) {
       // Click with no selection, remove selection
-      this.setState({ selection: {} })
+      this.cancelSelection()
     } else if (startOffset > endOffset) {
       this.setState({ selection: { startOffset: endOffset, endOffset: startOffset } })
     } else {
@@ -231,6 +221,11 @@ export default class Annotate extends Component {
     this.setState({ selection: {} })
   }
 
+  createAnnotation = (type, range, data) => {
+    this.cancelSelection()
+    this.props.createAnnotation(type, range, data)
+  }
+
   renderNodes () {
     return this.nodeMap.map((node) => node.uiNode)
   }
@@ -241,7 +236,7 @@ export default class Annotate extends Component {
         key={`node_${node.id}`}
         ref={this.setRef(node.id)}
         cancelSelection={this.cancelSelection}
-        createAnnotation={this.props.createAnnotation}
+        createAnnotation={this.createAnnotation}
         node={node}
       />
     )

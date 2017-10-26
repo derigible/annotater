@@ -9,3 +9,19 @@
 .popoverContainer {
   margin-top: var(--popoverContainerMargin);
 }
+
+.blue {
+  background-color: var(--higlightBlue);
+}
+
+.green {
+  background-color: var(--higlightGreen);
+}
+
+.red {
+  background-color: var(--higlightRed);
+}
+
+.yellow {
+  background-color: var(--higlightYellow);
+}

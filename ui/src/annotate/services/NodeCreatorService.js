@@ -1,6 +1,7 @@
 import { v4 as uuid } from 'uuid'
 
 import * as nodeTypes from '../nodeTypes'
+import * as colors from '../colors'
 
 /* Nodes from persistence will have a schema as follows:
  * {
@@ -14,12 +15,26 @@ import * as nodeTypes from '../nodeTypes'
  * */
 export default function createNode (type, range, data) {
   switch (type) {
+    case nodeTypes.HIGHLIGHT:
+      return createHighlightNode(range, data)
     case nodeTypes.TEXT:
       return createTextNode(range, data)
     case nodeTypes.TAG:
       return createTagNode(range, data)
     default:
       return createErrorNode(range, data)
+  }
+}
+
+function createHighlightNode (
+  range,
+  data = { color: Object.values(colors)[Math.floor(Math.random() * Object.values(colors).length)] }
+) {
+  return {
+    id: uuid(),
+    range,
+    type: nodeTypes.HIGHLIGHT,
+    data
   }
 }
 
