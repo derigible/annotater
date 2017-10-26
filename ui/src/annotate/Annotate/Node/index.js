@@ -232,9 +232,9 @@ export default class Node extends Component {
   }
 
   renderContent () {
-    return this.props.node.definitionNodes.length > 1 ?
-      this.renderMultiTypePopover() :
-      this.renderPlainTextNode()
+    return this.props.node.definitionNodes.length > 1
+      ? this.renderMultiTypePopover()
+      : this.renderPlainTextNode()
   }
 
   // add data-id to get the internal node detail so we can normalize range offsets
