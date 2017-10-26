@@ -3,6 +3,7 @@ import PropTypes from 'prop-types'
 import SortedMap from 'collections/sorted-map'
 import SortedSet from 'collections/sorted-set'
 import findIndex from 'lodash/findIndex'
+import update from 'immutability-helper'
 
 import ScreenReaderContent from '@instructure/ui-core/lib/components/ScreenReaderContent'
 
@@ -44,11 +45,22 @@ export default class Annotate extends Component {
   }
 
   static getNormalizeOffset (selection) {
-    const startNode = selection.baseNode.parentNode.attributes['data-id']
+    const startOffset = parseInt(selection.baseNode.parentNode.attributes['data-id'].value, 10)
     const endNode = selection.focusNode.parentNode.attributes['data-id']
     return {
-      normalizeStartOffset: parseInt(startNode.value, 10),
-      normalizeEndOffset: parseInt(endNode.value, 10)
+      normalizeStartOffset: startOffset,
+      // if endNode is not defined, means drag ended on the end of the same node as start (may
+      // not be true when there are multiple nodetypes within the selection, will need to
+      // revisit)
+      normalizeEndOffset: endNode ? parseInt(endNode.value, 10) : (selection.baseNode.length - 1 || 1)
+    }
+  }
+
+  static createSelectionNode () {
+    return {
+      id: nodeTypes.SELECTION,
+      range: [],
+      type: nodeTypes.SELECTION
     }
   }
 
@@ -79,13 +91,10 @@ export default class Annotate extends Component {
       window.getSelection().removeAllRanges()
       // TODO: filter out all nodes in nodemap caught in between
       // this range offset and only render the select node
-      if (newSelection.startOffset) {
-        // Only fire the timeout if the selection exists
-        setTimeout(() => {
-          this[`node_${newSelection.startOffset}`].showTypeMenu()
-        })
-      }
-
+      setTimeout(() => {
+        const component = this[`node_${newSelection.startOffset}`]
+        component && component.showTypeMenu()
+      })
     }
   }
 
@@ -121,7 +130,7 @@ export default class Annotate extends Component {
     this[`node_${id}`] = node
   }
 
-  mergeNodes (selection) {
+  mergeNodes (selection, newStartOffset) {
     if (selection.startOffset === undefined) { return } // no selection has been made previously
     // remove old node selection by merging with node to the left
     const originalStart = this.getClosestStartOffset(selection.startOffset)
@@ -164,16 +173,16 @@ export default class Annotate extends Component {
     let leftNodeDefinitions = toSplit.definitionNodes
     // If removeSelection is true, means that the node on left already has selection
     if (!selectionOnRight && !removeSelection) {
-      leftNodeDefinitions = leftNodeDefinitions.concat([{ type: nodeTypes.SELECTION }])
+      leftNodeDefinitions = leftNodeDefinitions.concat([Annotate.createSelectionNode()])
     }
     const leftNode = this.createNode([nodeKey, splitOffset], leftNodeDefinitions)
 
     let rightNodeDefinitions = toSplit.definitionNodes
     if (selectionOnRight) {
-      rightNodeDefinitions = rightNodeDefinitions.concat([{ type: nodeTypes.SELECTION }])
+      rightNodeDefinitions = rightNodeDefinitions.concat([Annotate.createSelectionNode()])
     } else if (removeSelection) {
       const index = findIndex(rightNodeDefinitions, (n) => n.type === nodeTypes.SELECTION)
-      rightNodeDefinitions.splice(index, 1)
+      rightNodeDefinitions = update(rightNodeDefinitions, { $splice: [[index, 1]] })
     }
     const rightNode = this.createNode([splitOffset, toSplit.range[1]], rightNodeDefinitions)
 
@@ -220,10 +229,8 @@ export default class Annotate extends Component {
       <Node
         key={`node_${node.id}`}
         ref={this.setRef(node.id)}
-        id={node.id}
         cancelSelection={this.cancelSelection}
-        text={node.text}
-        types={Annotate.getTypes(node.definitionNodes)}
+        node={node}
       />
     )
   }
