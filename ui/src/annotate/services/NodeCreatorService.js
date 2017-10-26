@@ -16,10 +16,10 @@ export default function createNode (type, range, data) {
   switch (type) {
     case nodeTypes.TEXT:
       return createTextNode(range, data)
-    case nodeTypes.SELECTION:
-      return createSelectionNode(range, data)
+    case nodeTypes.TAG:
+      return createTagNode(range, data)
     default:
-      return createErrorNode(data)
+      return createErrorNode(range, data)
   }
 }
 
@@ -32,18 +32,19 @@ function createTextNode (range, data = { color: 'default', size: 'default' }) {
   }
 }
 
-function createSelectionNode (range) {
+function createTagNode (range, data) {
   return {
-    id: nodeTypes.SELECTION,
-    type: nodeTypes.SELECTION,
-    range
+    id: uuid(),
+    range,
+    type: nodeTypes.TAG,
+    data
   }
 }
 
 function createErrorNode (range, data) {
   return {
     id: uuid(),
-    range: range,
+    range,
     type: nodeTypes.ERROR,
     data
   }

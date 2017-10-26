@@ -48,12 +48,14 @@ class AnnotateDataWrapper extends Component {
       !this.props.nodesReceived
   }
 
-  addNode = (type, startOffset, endOffset) => {
+  createAnnotation = (type, range, data) => {
     const { documentId } = this.props
+    console.log(documentId, type, range, data)
     this.props.submitNode(
       documentId,
       type,
-      [startOffset, endOffset]
+      range,
+      data
     )
   }
 
@@ -65,7 +67,7 @@ class AnnotateDataWrapper extends Component {
     }
     return (
       <Annotate
-        addNode={this.addNode}
+        createAnnotation={this.createAnnotation}
         nodes={this.props.nodes}
         text={this.props.text}
         removeNode={this.removeNode}

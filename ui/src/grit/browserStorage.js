@@ -38,7 +38,7 @@ export function submitNode (id, nodeType, range, data) {
   return Promise.resolve(
     {
       id,
-      storedNodes
+      node
     }
   )
 }

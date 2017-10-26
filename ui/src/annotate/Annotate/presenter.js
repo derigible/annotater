@@ -14,8 +14,7 @@ import Node from './Node'
 
 export default class Annotate extends Component {
   static propTypes = {
-    // addNode: PropTypes.func.isRequired,
-    // removeNode: PropTypes.func.isRequired,
+    createAnnotation: PropTypes.func.isRequired,
     nodes: PropTypes.arrayOf(nodeDefinition).isRequired,
     text: PropTypes.string.isRequired
   }
@@ -71,20 +70,15 @@ export default class Annotate extends Component {
   }
 
   componentWillMount () {
-    const { nodes, ranges } = Annotate.getSortedNodesAndRanges(this.props.nodes)
-    for (let i = 0; i < ranges.length; i++) {
-      const range = [ranges[i], ranges[++i]]
-
-      const definitionNodes = Annotate.getDefinitionNodes(range, nodes)
-      this.nodeMap.set(range[0], this.createNode(range, definitionNodes))
-    }
+    this.computeNodes(this.props.nodes)
   }
 
   componentWillUpdate (nextProps, nextState) {
     const { selection } = this.state
     const newSelection = nextState.selection
     if (nextProps.nodes.length !== this.props.nodes.length) {
-      // Need to do something here
+      this.nodeMap.clear()
+      this.computeNodes(nextProps.nodes)
     } else if (selection.startOffset !== newSelection.startOffset || selection.endOffset !== newSelection.endOffset) { // will never have highlight when creating new node
       this.mergeNodes(selection)
       this.splitNodes(newSelection)
@@ -128,6 +122,19 @@ export default class Annotate extends Component {
 
   setRef = (id) => (node) => {
     this[`node_${id}`] = node
+  }
+
+  computeNodes (peristedNodes) {
+    const { nodes, ranges } = Annotate.getSortedNodesAndRanges(peristedNodes)
+    console.log(nodes, ranges)
+    for (let i = 1; i < ranges.length; i++) {
+      const startOffset = ranges[i - 1]
+      const endOffset = ranges[i]
+      const range = [startOffset, endOffset]
+
+      const definitionNodes = Annotate.getDefinitionNodes(range, nodes)
+      this.nodeMap.set(range[0], this.createNode(range, definitionNodes))
+    }
   }
 
   mergeNodes (selection, newStartOffset) {
@@ -230,6 +237,7 @@ export default class Annotate extends Component {
         key={`node_${node.id}`}
         ref={this.setRef(node.id)}
         cancelSelection={this.cancelSelection}
+        createAnnotation={this.props.createAnnotation}
         node={node}
       />
     )

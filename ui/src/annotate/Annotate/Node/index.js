@@ -52,23 +52,26 @@ export default class Node extends Component {
   }
 
   state = {
-    showTypeMenu: false
+    showTypeMenu: false,
+    show: true
   }
 
-  createTag = () => {
-    const { node } = this.props
-    this.props.createAnnotation(nodeTypes.TAG, node.range, node.text)
+  setTagRef = (node) => {
+    this.tagInput = node
   }
 
   getClassNames () {
     const types = Node.getTypes(this.props.node.definitionNodes)
     return classnames({
-      [styles.selection]: types.includes(nodeTypes.SELECTION)
+      [styles.selection]: types.includes(nodeTypes.SELECTION),
+      [styles.tag]: types.includes(nodeTypes.TAG)
     })
   }
 
-  setTagRef = (node) => {
-    this.tagInput = node
+  createTag = () => {
+    const { node } = this.props
+    this.setState({ show: false })
+    this.props.createAnnotation(nodeTypes.TAG, node.range, { label: this.tagInput.value })
   }
 
   showTypeMenu = () => {
@@ -81,7 +84,7 @@ export default class Node extends Component {
       <Popover
         applicationElement={() => document.getElementById('app')}
         closeButtonLabel="Close"
-        defaultShow
+        show={this.state.show}
         label="Select Type Popover"
         offsetX={this.props.node.text.length < 3 ? '16px' : undefined}
         on="click"
@@ -128,7 +131,7 @@ export default class Node extends Component {
                     layout="stacked"
                     rowSpacing="small"
                   >
-                    <Button fluidWidth variant="primary">Tag</Button>
+                    <Button onClick={this.createTag} fluidWidth variant="primary">Tag</Button>
                     <Button fluidWidth variant="primary">Highlight</Button>
                   </FormFieldGroup>
                 </GridCol>

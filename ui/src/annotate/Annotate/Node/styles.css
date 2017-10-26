@@ -2,6 +2,10 @@
   background-color: var(--selectionBackgroundColor);
 }
 
+.tag {
+  background-color: var(--tagBackgroundColor);
+}
+
 .popoverContainer {
   margin-top: var(--popoverContainerMargin);
 }
