@@ -44,8 +44,12 @@ export default class Annotate extends Component {
   }
 
   static getNormalizeOffset (selection) {
-    const domNode = selection.baseNode.parentNode.attributes['data-id']
-    return parseInt(domNode.value, 10)
+    const startNode = selection.baseNode.parentNode.attributes['data-id']
+    const endNode = selection.focusNode.parentNode.attributes['data-id']
+    return {
+      normalizeStartOffset: parseInt(startNode.value, 10),
+      normalizeEndOffset: parseInt(endNode.value, 10)
+    }
   }
 
   constructor (props) {
@@ -73,6 +77,7 @@ export default class Annotate extends Component {
       this.mergeNodes(selection)
       // TODO: add nodeTypes.SELECTION too all nodes in selection range?
       this.splitNodes(newSelection)
+      window.getSelection().removeAllRanges()
     }
   }
 
@@ -170,18 +175,16 @@ export default class Annotate extends Component {
 
   checkSelected = () => {
     const selection = window.getSelection()
-    if (selection.anchorOffset === selection.focusOffset) {
+    const { normalizeStartOffset, normalizeEndOffset } = Annotate.getNormalizeOffset(selection)
+    const startOffset = selection.anchorOffset + normalizeStartOffset
+    const endOffset = selection.focusOffset + normalizeEndOffset
+    if (startOffset === endOffset) {
       // Click with no selection, remove selection
       this.setState({ selection: {} })
+    } else if (startOffset > endOffset) {
+      this.setState({ selection: { startOffset: endOffset, endOffset: startOffset } })
     } else {
-      const normalizeOffset = Annotate.getNormalizeOffset(selection)
-      const startOffset = selection.anchorOffset + normalizeOffset
-      const endOffset = selection.focusOffset + normalizeOffset
-      if (startOffset > endOffset) {
-        this.setState({ selection: { startOffset: endOffset, endOffset: startOffset } })
-      } else {
-        this.setState({ selection: { startOffset, endOffset } })
-      }
+      this.setState({ selection: { startOffset, endOffset } })
     }
   }
 
