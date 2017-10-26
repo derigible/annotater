@@ -79,7 +79,11 @@ export default class Annotate extends Component {
     if (nextProps.nodes.length !== this.props.nodes.length) {
       this.nodeMap.clear()
       this.computeNodes(nextProps.nodes)
-    } else if (selection.startOffset !== newSelection.startOffset || selection.endOffset !== newSelection.endOffset) { // will never have highlight when creating new node
+    } else if (
+      selection.startOffset !== newSelection.startOffset ||
+      selection.endOffset !== newSelection.endOffset
+    ) {
+      console.log(selection, newSelection)
       this.mergeNodes(selection)
       this.splitNodes(newSelection)
       window.getSelection().removeAllRanges()
@@ -126,7 +130,6 @@ export default class Annotate extends Component {
 
   computeNodes (peristedNodes) {
     const { nodes, ranges } = Annotate.getSortedNodesAndRanges(peristedNodes)
-    console.log(nodes, ranges)
     for (let i = 1; i < ranges.length; i++) {
       const startOffset = ranges[i - 1]
       const endOffset = ranges[i]
@@ -137,7 +140,7 @@ export default class Annotate extends Component {
     }
   }
 
-  mergeNodes (selection, newStartOffset) {
+  mergeNodes (selection) {
     if (selection.startOffset === undefined) { return } // no selection has been made previously
     // remove old node selection by merging with node to the left
     const originalStart = this.getClosestStartOffset(selection.startOffset)
@@ -160,16 +163,17 @@ export default class Annotate extends Component {
   splitNodes (newSelection) {
     if (newSelection.startOffset === undefined) { return } // selection was removed on this update
     // find closest start offset to split/merge the node
-    const startNodeKey = this.getClosestStartOffset(newSelection)
+    const startNodeKey = this.getClosestStartOffset(newSelection.startOffset)
     // find closest end offset to possibly split the node
-    const endNodeKey = this.getClosestEndOffsetNodeKey(newSelection)
+    const endNodeKey = this.getClosestEndOffsetNodeKey(newSelection.endOffset)
+    console.log(startNodeKey, endNodeKey, Array.from(this.nodeMap.keys()))
     if (startNodeKey !== endNodeKey) {
       this.splitNode(startNodeKey, newSelection.startOffset)
       this.splitNode(endNodeKey, newSelection.endOffset)
     } else {
       this.splitNode(startNodeKey, newSelection.startOffset)
       // the new startOffset has now been created as a node, we will
-      // need to split that node to account for the unhighlighted portion
+      // need to split that node to apply the end node correctly
       this.splitNode(newSelection.startOffset, newSelection.endOffset, false, true)
     }
   }
