@@ -75,9 +75,13 @@ export default class Annotate extends Component {
       // Need to do something here
     } else if (selection.startOffset !== newSelection.startOffset || selection.endOffset !== newSelection.endOffset) { // will never have highlight when creating new node
       this.mergeNodes(selection)
-      // TODO: add nodeTypes.SELECTION too all nodes in selection range?
       this.splitNodes(newSelection)
       window.getSelection().removeAllRanges()
+      // TODO: filter out all nodes in nodemap caught in between
+      // this range offset and only render the select node
+      setTimeout(() => {
+        this[`node_${newSelection.startOffset}`].showTypeMenu()
+      })
     }
   }
 
