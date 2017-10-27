@@ -6,12 +6,17 @@ import findIndex from 'lodash/findIndex'
 import update from 'immutability-helper'
 
 import ScreenReaderContent from '@instructure/ui-core/lib/components/ScreenReaderContent'
+import themeable from '@instructure/ui-themeable'
 
 import { nodeDefinition } from '../../react/customPropTypes'
 import * as nodeTypes from '../nodeTypes'
 
 import Node from './Node'
 
+import styles from './styles.css'
+import theme from './theme'
+
+@themeable(theme, styles)
 export default class Annotate extends Component {
   static propTypes = {
     createAnnotation: PropTypes.func.isRequired,
@@ -292,6 +297,7 @@ export default class Annotate extends Component {
         onMouseUp={this.checkSelected}
         onKeyUp={this.checkSelected}
         onTouchEnd={this.checkSelected}
+        className={styles.container}
       >
         <ScreenReaderContent>Select some text to bring up annotation options</ScreenReaderContent>
         {this.renderNodes()}

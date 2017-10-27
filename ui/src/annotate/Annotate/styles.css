@@ -1,0 +1,4 @@
+.container {
+  margin: var(--containerMargin);
+  padding: var(--containerPadding);
+}
