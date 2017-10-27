@@ -1,4 +1,7 @@
 .container {
   margin: var(--containerMargin);
   padding: var(--containerPadding);
+  border: var(--containerBorderWidth) var(--containerBorderStyle) var(--containerBorderColor);
+  border-radius: var(--containerBorderRadius);
+  height: 100%;
 }

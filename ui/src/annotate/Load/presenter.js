@@ -4,6 +4,7 @@ import uniqueId from 'lodash/uniqueId'
 
 import Button from '@instructure/ui-core/lib/components/Button'
 import Checkbox from '@instructure/ui-core/lib/components/Checkbox'
+import Container from '@instructure/ui-core/lib/components/Container'
 import FormFieldGroup from '@instructure/ui-core/lib/components/FormFieldGroup'
 import ScreenReaderContent from '@instructure/ui-core/lib/components/ScreenReaderContent'
 import TextArea from '@instructure/ui-core/lib/components/TextArea'
@@ -35,24 +36,29 @@ export default class Load extends Component {
 
   render () {
     return (
-      <FormFieldGroup
-        description={<ScreenReaderContent>Import Text</ScreenReaderContent>}
+      <Container
+        margin="large"
       >
-        <TextArea
-          label="Enter Text Below"
-          resize="vertical"
-          placeholder="Waiting for input..."
-          autoGrow
-          textareaRef={this.setTextareaRef}
-        />
-        <Checkbox ref={this.setCheckboxRef} label="Enable spell check" value="medium" defaultChecked />
-        <Button
-          variant="primary"
-          onClick={this.submitText}
+        <FormFieldGroup
+          margin="large"
+          description={<ScreenReaderContent>Import Text</ScreenReaderContent>}
         >
-          Import
-        </Button>
-      </FormFieldGroup>
+          <TextArea
+            label="Enter Text Below"
+            resize="vertical"
+            placeholder="Waiting for input..."
+            autoGrow
+            textareaRef={this.setTextareaRef}
+          />
+          <Checkbox ref={this.setCheckboxRef} label="Enable spell check" value="medium" defaultChecked />
+          <Button
+            variant="primary"
+            onClick={this.submitText}
+          >
+            Import
+          </Button>
+        </FormFieldGroup>
+      </Container>
     )
   }
 }
