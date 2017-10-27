@@ -1,18 +1,42 @@
 import React, { Component } from 'react'
 import PropTypes from 'prop-types'
 import uniqueId from 'lodash/uniqueId'
+import debounce from 'lodash/debounce'
 
 import Button from '@instructure/ui-core/lib/components/Button'
 import Checkbox from '@instructure/ui-core/lib/components/Checkbox'
 import Container from '@instructure/ui-core/lib/components/Container'
 import FormFieldGroup from '@instructure/ui-core/lib/components/FormFieldGroup'
 import ScreenReaderContent from '@instructure/ui-core/lib/components/ScreenReaderContent'
-import TextArea from '@instructure/ui-core/lib/components/TextArea'
-// import RichContentInput from 'quiz-interactions/lib/components/common/components/rce/RichContentInput'
+import RichContentInput from 'quiz-interactions/lib/components/common/components/rce/RichContentInput'
+
+function debouncer (update) {
+  return debounce(update, 500, {
+    leading: false,
+    maxWait: 3000,
+    trailing: true
+  })
+}
+
+function getProps (overrides) {
+  return {
+    toolbar: [
+      'undo redo | bold italic underline | removeformat | ' +
+      'alignleft aligncenter alignright | superscript subscript bullist numlist | ' +
+      'fontsizeselect | formatselect | table quizzes_image media link'
+    ],
+    ...overrides
+  }
+}
 
 export default class Load extends Component {
   static propTypes = {
     submitText: PropTypes.func.isRequired
+  }
+
+  state = {
+    spellcheck: true,
+    rceContent: ''
   }
 
   setCheckboxRef = (node) => {
@@ -24,56 +48,62 @@ export default class Load extends Component {
   }
 
   submitText = () => {
-    this.props.submitText(this.textareaRef.value)
+    this.props.submitText(this.state.rceContent)
   }
 
   uniqueId = uniqueId()
 
-  handleOnChange = () => {}
+  handleOnChange = debouncer((event, rceContent) => {
+    this.setState({ rceContent: rceContent.editorContent })
+  })
+
   handleOnBlur = () => {}
   handleOpenImportModal = () => {}
+  handleSpellCheckChange = (e) => { this.setState({ spellcheck: e.target.checked }) }
   renderImportModal = () => {}
 
   render () {
     return (
-      <Container
-        margin="large"
-      >
-        <FormFieldGroup
+      <div>
+        <Container
           margin="large"
-          description={<ScreenReaderContent>Import Text</ScreenReaderContent>}
         >
-          <TextArea
-            label="Enter Text Below"
-            resize="vertical"
-            placeholder="Waiting for input..."
-            autoGrow
-            textareaRef={this.setTextareaRef}
-          />
-          <Checkbox ref={this.setCheckboxRef} label="Enable spell check" value="medium" defaultChecked />
-          <Button
-            variant="primary"
-            onClick={this.submitText}
+          <FormFieldGroup
+            margin="large"
+            description={<ScreenReaderContent>Import Text</ScreenReaderContent>}
           >
-            Import
-          </Button>
-        </FormFieldGroup>
-      </Container>
+            <RichContentInput
+              actsAsInput
+              appContainer="#content"
+              id="load_content_rce"
+              label={<ScreenReaderContent>Rich Content Entry</ScreenReaderContent>}
+              name="load_rce"
+              onBlur={this.handleOnBlur}
+              onChange={this.handleOnChange}
+              onKeyUp={this.handleOnChange}
+              openImportModal={this.handleOpenImportModal}
+              placeholder="Waiting for input..."
+              renderImportModal={this.renderImportModal}
+              textareaId={`rceTextArea_${this.uniqueId}`}
+              tinyMCEOptions={getProps({ browser_spellcheck: this.state.spellcheck })}
+              type="text"
+              ref={this.setTextareaRef}
+            />
+            <Checkbox
+              ref={this.setCheckboxRef}
+              checked={this.state.spellcheck}
+              onChange={this.handleSpellCheckChange}
+              label="Enable spell check"
+            />
+            <Button
+              variant="primary"
+              onClick={this.submitText}
+            >
+              Import
+            </Button>
+          </FormFieldGroup>
+        </Container>
+      </div>
     )
   }
 }
-
-// Add this in when quizInteractions is working well again
-// <RichContentInput
-//   appContainer="#content"
-//   textareaId={`rceTextArea_${this.uniqueId}`}
-//   label={<ScreenReaderContent>Rich Content Entry</ScreenReaderContent>}
-//   onChange={this.handleOnChange}
-//   onKeyUp={this.handleOnChange}
-//   onBlur={this.handleOnBlur}
-//   openImportModal={this.handleOpenImportModal}
-//   renderImportModal={this.renderImportModal}
-//   tinyMCEOptions={{
-//     browser_spellcheck: this.checkboxRef.value
-//   }}
-// />

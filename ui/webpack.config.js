@@ -46,7 +46,8 @@ Object.assign(exports, {
     noParse: [
       /jquery\/dist\/jquery/,
       /lodash\/lodash/,
-      /tinymce\/tinymce/ // has 'require' and 'define' but they are from it's own internal closure
+      /tinymce-light-skin\/lib\/skin/,
+      /tinymce\/tinymce/
     ],
     // eslint-disable-next-line global-require
     rules: [
