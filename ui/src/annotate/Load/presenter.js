@@ -13,7 +13,7 @@ import RichContentInput from 'quiz-interactions/lib/components/common/components
 function debouncer (update) {
   return debounce(update, 500, {
     leading: false,
-    maxWait: 3000,
+    maxWait: 600,
     trailing: true
   })
 }
@@ -27,6 +27,22 @@ function getProps (overrides) {
     ],
     ...overrides
   }
+}
+
+function tagElements (content) {
+  const temp = document.createElement('div')
+  temp.innerHTML = content.replace(/<p[^>]*>/g, '<span>').replace(/<\/p>/g, '</span><br />')
+  const toTag = temp.childNodes
+  const domString = []
+  toTag.forEach((tag) => {
+    // eslint-disable-next-line no-param-reassign
+    tag.dataset && (tag.dataset.positionId = uniqueId())
+    domString.push(tag.outerHTML)
+  })
+  // Possible replace all p tags with br, which means that the data-position-id above breaks :{
+  // but may be the best option. look into further
+  // return domString.join('')
+  return domString.join('')
 }
 
 export default class Load extends Component {
@@ -48,7 +64,7 @@ export default class Load extends Component {
   }
 
   submitText = () => {
-    this.props.submitText(this.state.rceContent)
+    this.props.submitText(tagElements(this.state.rceContent))
   }
 
   uniqueId = uniqueId()
@@ -69,7 +85,6 @@ export default class Load extends Component {
           margin="large"
         >
           <FormFieldGroup
-            margin="large"
             description={<ScreenReaderContent>Import Text</ScreenReaderContent>}
           >
             <RichContentInput

@@ -57,24 +57,10 @@ export default class Annotate extends Component {
     return { nodes, ranges }
   }
 
-  static getNormalizeOffset (selection) {
-    const baseNode = Annotate.recursivelyFindContainingComponent(selection.baseNode.parentNode)
-    const focusNode = Annotate.recursivelyFindContainingComponent(selection.focusNode.parentNode)
-    const startOffset = parseInt(baseNode.attributes['data-id'].value, 10)
-    const endNode = focusNode.attributes['data-id']
-    return {
-      normalizeStartOffset: startOffset,
-      // if endNode is not defined, means drag ended on the end of the same node as start (may
-      // not be true when there are multiple nodetypes within the selection, will need to
-      // revisit)
-      normalizeEndOffset: endNode ? parseInt(endNode.value, 10) : (selection.baseNode.length - 1 || 1)
-    }
-  }
-
-  static recursivelyFindContainingComponent (domNode) {
+  static recursivelyFindContainingComponent (domNode, attr = 'data-position-id') {
     if (domNode === undefined) { return null }
-    if (domNode.attributes['data-id'] === undefined) {
-      return Annotate.recursivelyFindContainingComponent(domNode.parentNode)
+    if (domNode.attributes[attr] === undefined) {
+      return Annotate.recursivelyFindContainingComponent(domNode.parentNode, attr)
     }
     return domNode
   }
@@ -114,7 +100,7 @@ export default class Annotate extends Component {
     ) {
       this.mergeNodes(selection)
       this.splitNodes(newSelection)
-      window.getSelection().removeAllRanges()
+      // window.getSelection().removeAllRanges()
       // TODO: filter out all nodes in nodemap caught in between
       // this range offset and only render the select node
       setTimeout(() => {
@@ -135,6 +121,18 @@ export default class Annotate extends Component {
       prev = keys[i]
     }
     return prev
+  }
+
+  getNormalizeOffset (selection) {
+    // TODO: will need to add data-position-id to new nodes
+    const baseNode = Annotate.recursivelyFindContainingComponent(selection.baseNode.parentNode).attributes['data-position-id'].value
+    const focusNode = Annotate.recursivelyFindContainingComponent(selection.focusNode.parentNode).attributes['data-position-id'].value
+    const startOffset = this.props.text.indexOf(`data-position-id="${baseNode}"`) + (`data-position-id="${baseNode}">`.length)
+    let endOffset = startOffset
+    if (baseNode !== focusNode) {
+      endOffset = this.props.text.indexOf(`data-position-id="${focusNode}"`) + (`data-position-id="${baseNode}">`.length)
+    }
+    return { normalizeStartOffset: startOffset, normalizeEndOffset: endOffset }
   }
 
   setRef = (id) => (node) => {
@@ -238,8 +236,7 @@ export default class Annotate extends Component {
 
   checkSelected = () => {
     const selection = window.getSelection()
-    console.log(selection)
-    const { normalizeStartOffset, normalizeEndOffset } = Annotate.getNormalizeOffset(selection)
+    const { normalizeStartOffset, normalizeEndOffset } = this.getNormalizeOffset(selection)
     const startOffset = selection.anchorOffset + normalizeStartOffset
     const endOffset = selection.focusOffset + normalizeEndOffset
     if (startOffset === endOffset) {
