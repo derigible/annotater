@@ -22,7 +22,8 @@ export default class Element extends Component {
       childNodes: PropTypes.object.isRequired,
       dataset: PropTypes.object.isRequired,
       style: PropTypes.object.isRequired
-    }).isRequired
+    }).isRequired,
+    getElementDefinition: PropTypes.func.isRequired
   }
 
   renderChildNodes () {
@@ -33,17 +34,27 @@ export default class Element extends Component {
         return
       }
       const id = parseId(el)
-      nodes.push(<Element key={id} element={el} />)
+      nodes.push(<Element key={id} element={el} getElementDefinition={this.props.getElementDefinition} />)
     })
     return nodes
   }
 
   render () {
+    const id = parseId(this.props.element)
     const Node = this.props.element.tagName.toLowerCase()
+    const definition = this.props.getElementDefinition(id)
+
+    const getSelection = () => {
+      if (definition.selection.selected) {
+        return { backgroundColor: 'blue' }
+      }
+      return {}
+    }
+
     return (
       <Node
-        data-position-id={parseId(this.props.element)}
-        style={getStyles(this.props.element.style)}
+        data-position-id={id}
+        style={{ ...getStyles(this.props.element.style), ...getSelection() }}
       >
         {this.renderChildNodes()}
       </Node>

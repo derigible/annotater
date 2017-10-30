@@ -35,7 +35,7 @@ export default class Annotate extends Component {
     this.textContainer = document.createElement('div')
     this.nodeMap = new SortedMap()
     this.topLevel = []
-    this.state = { selection: {} }
+    this.state = { selection: [] }
   }
 
   componentWillMount () {
@@ -44,18 +44,6 @@ export default class Annotate extends Component {
     this.textContainer.childNodes.forEach((n) => {
       this.topLevel.push(n)
     })
-  }
-
-  checkSelected = () => {
-    const selection = window.getSelection()
-    console.log(selection)
-    const nodesBetween = this.getNodesBetween(
-      this.getContainingParentNode(selection.anchorNode),
-      this.getContainingParentNode(selection.focusNode),
-      getInnerPosition(selection.anchorNode),
-      getInnerPosition(selection.focusNode)
-    )
-    console.log(nodesBetween)
   }
 
   getContainingParentNode (node) {
@@ -68,8 +56,7 @@ export default class Annotate extends Component {
     return null
   }
 
-  getNodesBetween (left, right, leftInner, rightInner) {
-    console.log(Array.from(this.nodeMap.keys()))
+  getNodesBetween (left, right) {
     const nodes = []
     for (let i = left.id; i <= right.id; i++) {
       nodes.push(this.nodeMap.get(i))
@@ -80,20 +67,55 @@ export default class Annotate extends Component {
   mapElement (element) {
     if (element.dataset) {
       const id = parseId(element)
-      id && this.nodeMap.set(id, { id, element })
+      id && this.nodeMap.set(id, { id, element, selection: { selected: false } })
     }
     element.childNodes && element.childNodes.forEach((el) => {
       this.mapElement(el)
     })
   }
 
+  checkSelected = () => {
+    const sel = window.getSelection()
+    console.log(sel)
+    const selection = this.getNodesBetween(
+      this.getContainingParentNode(sel.anchorNode),
+      this.getContainingParentNode(sel.focusNode)
+    )
+    selection.forEach((n) => {
+      // eslint-disable-next-line no-param-reassign
+      n.selection.selected = true
+    })
+    selection[0].selection.anchorOffset = sel.anchorOffset
+    selection[0].selection.innerPosition = getInnerPosition(sel.anchorNode)
+    selection[selection.length - 1].selection.focusOffset = sel.focusOffset
+    selection[selection.length - 1].selection.innerPosition = getInnerPosition(sel.focusNode)
+    this.setState({ selection })
+  }
+
   createAnnotation = (type, range, data) => {
     this.props.createAnnotation(type, range, data)
   }
 
+  clearSelection = () => {
+    this.state.selection.forEach((s) => {
+      // eslint-disable-next-line no-param-reassign
+      s.selection = { selected: false }
+    })
+  }
+
+  getElementDefinition = (id) => {
+    return this.nodeMap.get(id)
+  }
+
   renderNodes () {
     return this.topLevel.map((el) => {
-      return <Element key={parseId(el)} element={el} />
+      return (
+        <Element
+          key={parseId(el)}
+          element={el}
+          getElementDefinition={this.getElementDefinition}
+        />
+      )
     })
   }
 
