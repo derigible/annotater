@@ -90,7 +90,8 @@ export default class Element extends Component {
   }
 
   setSelection (selection) {
-    const anchorPosition = selection.anchorInnerPosition ? selection.anchorInnerPosition : selection.focusInnerPosition
+    const anchorPosition = selection.anchorInnerPosition !== undefined ?
+      selection.anchorInnerPosition : selection.focusInnerPosition
     const anchorChildNode = this.props.element.element.childNodes[anchorPosition]
 
     const lnRange = [0, selection.anchorOffset !== undefined ? selection.anchorOffset : selection.focusOffset]
@@ -100,7 +101,8 @@ export default class Element extends Component {
       </span>
     )
 
-    const focusPosition = selection.anchorInnerPosition ? selection.anchorInnerPosition : selection.focusInnerPosition
+    const focusPosition = selection.anchorInnerPosition !== undefined ?
+      selection.anchorInnerPosition : selection.focusInnerPosition
     const focusChildNode = this.props.element.element.childNodes[focusPosition]
     const rnRange = getRightNodeRange(selection, focusChildNode.textContent.length)
     const rn = (

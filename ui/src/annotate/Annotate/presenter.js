@@ -81,6 +81,7 @@ export default class Annotate extends Component {
     }
     const an = this.getContainingParentNode(sel.anchorNode)
     const fn = this.getContainingParentNode(sel.focusNode)
+    if (an === null || fn === null) { return }
     const inLine = an.id <= fn.id
     const ln = inLine ? an : fn
     const rn = inLine ? fn : an
@@ -112,7 +113,7 @@ export default class Annotate extends Component {
     console.log(sel, selection)
     this.updateSelected(selection)
     this.setState({ selection })
-    // window.getSelection().removeAllRanges()
+    window.getSelection().removeAllRanges()
   }
 
   createAnnotation = (type, range, data) => {
