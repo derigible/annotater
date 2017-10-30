@@ -11,6 +11,10 @@ import Element, { parseId } from './Element'
 import styles from './styles.css'
 import theme from './theme'
 
+function getInnerPosition (node) {
+  return node.dataset && node.dataset.innerPosition && node.dataset.innerPosition
+}
+
 @themeable(theme, styles)
 export default class Annotate extends Component {
   static propTypes = {
@@ -42,6 +46,41 @@ export default class Annotate extends Component {
     })
   }
 
+  checkSelected = () => {
+    const selection = window.getSelection()
+    console.log(selection)
+    const nodesBetween = this.getNodesBetween(
+      this.getContainingParentId(selection.anchorNode),
+      this.getContainingParentId(selection.focusNode),
+      getInnerPosition(selection.anchorNode),
+      getInnerPosition(selection.focusNode)
+    )
+    console.log(nodesBetween)
+  }
+
+  getContainingParentId (node) {
+    const id = parseId(node.parentNode)
+    if (id) {
+      return this.nodeMap.get(id)
+    } else if (node.parentNode.parentNode) {
+      return this.getContainingParentId(node.parentNode)
+    }
+    return null
+  }
+
+  getNodesBetween (left, right, leftInner, rightInner) {
+    const ln = this.nodeMap.get(left)
+    const rn = this.nodeMap.get(right)
+    const nodes = []
+    for (let i = ln; i <= rn; i++) {
+      nodes.push(this.nodeMap.get(i))
+    }
+    if (nodes.length) {
+      return nodes
+    }
+    return left // either left or right since same node
+  }
+
   mapElement (element) {
     if (element.dataset) {
       const id = parseId(element)
@@ -50,43 +89,6 @@ export default class Annotate extends Component {
     element.childNodes && element.childNodes.forEach((el) => {
       this.mapElement(el)
     })
-  }
-
-  checkSelected = () => {
-    const selection = window.getSelection()
-    console.log(selection)
-    // get Nodes to split, add selection annotation an split
-    //  left node -> split and all nodes to right of offset recursively get
-    //  selection annotation
-    //  right node -> split and all node to the left offset recursively get
-    //  selection annotation
-    //  in between -> all Node components receive annotation of Selection
-    const leftNode = this.getParentNodeRecursively(selection.anchorNode)
-    const rightNode = this.getParentNodeRecursively(selection.focusNode)
-    const nodesBetween = this.getNodesBetween(leftNode, rightNode)
-    // {
-    //  id: 'span.2.span.sup.span',
-    //  offset: 5
-    //  type: 'end'
-    // } =>
-    // <span>
-    //  <span></span>
-    //  <span>
-    //    <sup>
-    //      <span>
-    //        abcdef|this is the described place|g
-    //      </span>
-    //      alad
-    //    </sup>
-    //    adfag
-    //  </span>
-    //  ddfaga
-    //  <span>asd</span>
-    // <span>
-    // In english: split at offset five of the first span of the first sup of
-    // the second span of the root span
-    //
-    // In node Component, index all childNodes with the
   }
 
   createAnnotation = (type, range, data) => {
