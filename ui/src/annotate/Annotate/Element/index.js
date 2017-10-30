@@ -1,11 +1,14 @@
 import React, { Component } from 'react'
 import PropTypes from 'prop-types'
 import camelCase from 'lodash/camelCase'
-import findIndex from 'lodash/findIndex'
 import update from 'immutability-helper'
 
 export function parseId (el) {
   return el.dataset && el.dataset.positionId && parseInt(el.dataset.positionId, 10)
+}
+
+function isTextNode (el) {
+  return el.tagName === undefined
 }
 
 function getStyles (style) {
@@ -15,10 +18,6 @@ function getStyles (style) {
     inlineStyles[camelCase(styleName)] = style.getPropertyValue(styleName)
   }
   return inlineStyles
-}
-
-function getInnerPosition (el) {
-  return el.dataset && el.dataset.innerPosition && parseInt(el.dataset.innerPosition, 10)
 }
 
 function getRightNodeRange (selection, textLength) {
@@ -32,7 +31,7 @@ function getRightNodeRange (selection, textLength) {
 
 function styleSelection (selection, isRightNode = false) {
   if (isRightNode) {
-    if (selection.anchorOffset && !selection.focusOffset) {
+    if (selection.anchorOffset) {
       return { backgroundColor: 'blue' }
     }
     return {}
@@ -70,9 +69,9 @@ export default class Element extends Component {
     definition.component = this
     this.childNodes = []
     this.props.element.element.childNodes.forEach((el, index) => {
-      if (el.tagName === undefined) {
+      if (isTextNode(el)) {
         this.childNodes.push(
-          <span key={el.textContent.substring(0, 5)} data-inner-position={index + 1}>
+          <span key={el.textContent.substring(0, 5)} data-inner-position={index}>
             {el.textContent}
           </span>
         )
@@ -91,13 +90,8 @@ export default class Element extends Component {
   }
 
   setSelection (selection) {
-    const innerIndexOf = findIndex(
-      this.childNodes,
-      (n) => getInnerPosition(n) === selection.innerPosition
-    )
-    const childNode = this.props.element.element.childNodes[innerIndexOf]
-    if (this.childNodeInSelection(childNode)) { return } // childNode will take care of selection
-    console.log(childNode)
+    const childNode = this.props.element.element.childNodes[selection.innerPosition]
+    if (this.childNodeInSelection(childNode) && !isTextNode(childNode)) { return } // childNode will take care of selection
     const lnRange = [0, selection.anchorOffset ? selection.anchorOffset : selection.focusOffset]
     const ln = (
       <span key={`${childNode.textContent.substring(...lnRange)}_left`} style={styleSelection(selection)} >
@@ -120,33 +114,35 @@ export default class Element extends Component {
       )
       this.childNodes = update(
         this.childNodes,
-        { $splice: [[innerIndexOf, 1, ln, rn, remainderNode]] }
+        { $splice: [[selection.innerPosition, 1, ln, rn, remainderNode]] }
       )
     } else {
       this.childNodes = update(
         this.childNodes,
-        { $splice: [[innerIndexOf, 1, ln, rn]] }
+        { $splice: [[selection.innerPosition, 1, ln, rn]] }
       )
     }
-    console.log(this.childNodes)
 
-    this.setState({ selection: { ...selection, innerIndexOf } })
+    this.setState({ selection: { ...selection, innerIndexOf: selection.innerPosition } })
   }
 
   clearSelection () {
     const { selection } = this.state
     const { innerIndexOf } = selection
-    const spliceNumber = selection.focusOffset ? 3 : 2
-    const childNode = this.props.element.element.childNodes[innerIndexOf]
-    const survivingNode = (
-      <span key={childNode.textContent.substring(0, 5)} data-inner-position={innerIndexOf}>
-        {childNode.textContent}
-      </span>
-    )
-    this.childNodes = update(
-      this.childNodes,
-      { $splice: [[selection.innerIndexOf, spliceNumber, survivingNode]] }
-    )
+    if (innerIndexOf !== undefined) {
+      const spliceNumber = selection.focusOffset ? 3 : 2
+      const childNode = this.props.element.element.childNodes[innerIndexOf]
+      const survivingNode = (
+        <span key={childNode.textContent.substring(0, 5)} data-inner-position={innerIndexOf}>
+          {childNode.textContent}
+        </span>
+      )
+      this.childNodes = update(
+        this.childNodes,
+        { $splice: [[selection.innerIndexOf, spliceNumber, survivingNode]] }
+      )
+    }
+
     this.setState({ selection: { selected: false } })
   }
 

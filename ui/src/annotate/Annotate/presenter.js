@@ -12,7 +12,11 @@ import styles from './styles.css'
 import theme from './theme'
 
 function getInnerPosition (node) {
-  return node.dataset && node.dataset.innerPosition && node.dataset.innerPosition
+  if (!node.dataset) {
+    if (!node.parentNode) { return null }
+    return getInnerPosition(node.parentNode)
+  }
+  return node.dataset.innerPosition && parseInt(node.dataset.innerPosition, 10)
 }
 
 @themeable(theme, styles)
@@ -58,7 +62,12 @@ export default class Annotate extends Component {
 
   getNodesBetween (left, right) {
     const nodes = []
-    for (let i = left.id; i <= right.id; i++) {
+    // Switch start positions if left.id is greater than right.id (means right to lef
+    // selection)
+    const l = left.id < right.id ? left.id : right.id
+    const r = left.id < right.id ? right.id : left.id
+    console.log(l,r)
+    for (let i = l; i <= r; i++) {
       nodes.push(this.nodeMap.get(i))
     }
     return nodes // will always have at least one node in it
@@ -79,6 +88,7 @@ export default class Annotate extends Component {
       this.getContainingParentNode(sel.anchorNode),
       this.getContainingParentNode(sel.focusNode)
     )
+    console.log(sel, selection)
     selection.forEach((n) => {
       // eslint-disable-next-line no-param-reassign
       n.selection.selected = true
@@ -87,9 +97,10 @@ export default class Annotate extends Component {
     selection[0].selection.innerPosition = getInnerPosition(sel.anchorNode)
     selection[selection.length - 1].selection.focusOffset = sel.focusOffset
     selection[selection.length - 1].selection.innerPosition = getInnerPosition(sel.focusNode)
+    console.log('The selection', selection)
     this.updateSelected(selection)
     this.setState({ selection })
-    window.getSelection().removeAllRanges()
+    // window.getSelection().removeAllRanges()
   }
 
   createAnnotation = (type, range, data) => {
