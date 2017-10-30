@@ -50,35 +50,31 @@ export default class Annotate extends Component {
     const selection = window.getSelection()
     console.log(selection)
     const nodesBetween = this.getNodesBetween(
-      this.getContainingParentId(selection.anchorNode),
-      this.getContainingParentId(selection.focusNode),
+      this.getContainingParentNode(selection.anchorNode),
+      this.getContainingParentNode(selection.focusNode),
       getInnerPosition(selection.anchorNode),
       getInnerPosition(selection.focusNode)
     )
     console.log(nodesBetween)
   }
 
-  getContainingParentId (node) {
+  getContainingParentNode (node) {
     const id = parseId(node.parentNode)
     if (id) {
       return this.nodeMap.get(id)
     } else if (node.parentNode.parentNode) {
-      return this.getContainingParentId(node.parentNode)
+      return this.getContainingParentNode(node.parentNode)
     }
     return null
   }
 
   getNodesBetween (left, right, leftInner, rightInner) {
-    const ln = this.nodeMap.get(left)
-    const rn = this.nodeMap.get(right)
+    console.log(Array.from(this.nodeMap.keys()))
     const nodes = []
-    for (let i = ln; i <= rn; i++) {
+    for (let i = left.id; i <= right.id; i++) {
       nodes.push(this.nodeMap.get(i))
     }
-    if (nodes.length) {
-      return nodes
-    }
-    return left // either left or right since same node
+    return nodes // will always have at least one node in it
   }
 
   mapElement (element) {

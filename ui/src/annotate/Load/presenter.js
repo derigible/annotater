@@ -29,10 +29,12 @@ function getProps (overrides) {
   }
 }
 
+let childrenTag = 1
+
 function tagChildren (node) {
   node.childNodes && node.childNodes.forEach((n) => {
     // eslint-disable-next-line no-param-reassign
-    n.dataset && (n.dataset.positionId = uniqueId())
+    n.dataset && (n.dataset.positionId = childrenTag++)
     tagChildren(n)
   })
 }
@@ -41,6 +43,7 @@ function tagElements (content) {
   const temp = document.createElement('div')
   temp.innerHTML = content
   tagChildren(temp)
+  childrenTag = 1
   return temp.innerHTML
 }
 
@@ -66,7 +69,7 @@ export default class Load extends Component {
     this.props.submitText(tagElements(this.state.rceContent))
   }
 
-  uniqueId = uniqueId()
+  uniqueId = 'textAreaRCE'
 
   handleOnChange = debouncer((event, rceContent) => {
     this.setState({ rceContent: rceContent.editorContent })

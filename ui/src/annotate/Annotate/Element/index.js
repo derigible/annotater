@@ -29,7 +29,7 @@ export default class Element extends Component {
     const nodes = []
     this.props.element.childNodes.forEach((el, index) => {
       if (el.tagName === undefined) {
-        nodes.push(<span key={el.textContent.substring(0, 5)} data-inner-position={index}>{el.textContent}</span>)
+        nodes.push(<span key={el.textContent.substring(0, 5)} data-inner-position={index + 1}>{el.textContent}</span>)
         return
       }
       const id = parseId(el)
