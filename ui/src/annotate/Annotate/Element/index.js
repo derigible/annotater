@@ -90,58 +90,68 @@ export default class Element extends Component {
   }
 
   setSelection (selection) {
-    const childNode = this.props.element.element.childNodes[selection.innerPosition]
-    if (this.childNodeInSelection(childNode) && !isTextNode(childNode)) { return } // childNode will take care of selection
+    const anchorPosition = selection.anchorInnerPosition ? selection.anchorInnerPosition : selection.focusInnerPosition
+    const anchorChildNode = this.props.element.element.childNodes[anchorPosition]
+    if (this.childNodeInSelection(anchorChildNode) && !isTextNode(anchorChildNode)) { return } // childNode will take care of selection
     const lnRange = [0, selection.anchorOffset ? selection.anchorOffset : selection.focusOffset]
     const ln = (
-      <span key={`${childNode.textContent.substring(...lnRange)}_left`} style={styleSelection(selection)} >
-        {childNode.textContent.substring(...lnRange)}
+      <span key={`${anchorChildNode.textContent.substring(...lnRange)}_left`} style={styleSelection(selection)} >
+        {anchorChildNode.textContent.substring(...lnRange)}
       </span>
     )
-    const rnRange = getRightNodeRange(selection, childNode.textContent.length)
+
+    const focusPosition = selection.anchorInnerPosition ? selection.anchorInnerPosition : selection.focusInnerPosition
+    const focusChildNode = this.props.element.element.childNodes[focusPosition]
+    const rnRange = getRightNodeRange(selection, focusChildNode.textContent.length)
     const rn = (
-      <span key={`${childNode.textContent.substring(...rnRange)}_right`} style={styleSelection(selection, true)} >
-        {childNode.textContent.substring(...rnRange)}
+      <span key={`${focusChildNode.textContent.substring(...rnRange)}_right`} style={styleSelection(selection, true)} >
+        {focusChildNode.textContent.substring(...rnRange)}
       </span>
     )
 
     if (selection.anchorOffset && selection.focusOffset) {
-      const remainder = [selection.focusOffset, childNode.textContent.length]
+      const remainder = [selection.focusOffset, focusChildNode.textContent.length]
       const remainderNode = (
-        <span key={`${childNode.textContent.substring(...remainder)}_remainder`}>
-          {childNode.textContent.substring(...remainder)}
+        <span key={`${focusChildNode.textContent.substring(...remainder)}_remainder`}>
+          {focusChildNode.textContent.substring(...remainder)}
         </span>
       )
       this.childNodes = update(
         this.childNodes,
-        { $splice: [[selection.innerPosition, 1, ln, rn, remainderNode]] }
+        { $splice: [[selection.anchorInnerPosition, 1, ln, rn, remainderNode]] }
       )
     } else {
       this.childNodes = update(
         this.childNodes,
-        { $splice: [[selection.innerPosition, 1, ln, rn]] }
+        { $splice: [[0, 1, ln, rn]] }
       )
     }
 
-    this.setState({ selection: { ...selection, innerIndexOf: selection.innerPosition } })
+    this.setState({
+      selection: {
+        ...selection,
+        // New nodes were created, offset increased by 1
+        anchorPosition: anchorPosition,
+        focusPosition: focusPosition
+      }
+    })
   }
 
   clearSelection () {
     const { selection } = this.state
-    const { innerIndexOf } = selection
-    if (innerIndexOf !== undefined) {
-      const spliceNumber = selection.focusOffset ? 3 : 2
-      const childNode = this.props.element.element.childNodes[innerIndexOf]
-      const survivingNode = (
-        <span key={childNode.textContent.substring(0, 5)} data-inner-position={innerIndexOf}>
-          {childNode.textContent}
-        </span>
-      )
-      this.childNodes = update(
-        this.childNodes,
-        { $splice: [[selection.innerIndexOf, spliceNumber, survivingNode]] }
-      )
-    }
+    const { anchorPosition, focusPosition } = selection
+    const position = anchorPosition !== undefined ? anchorPosition : focusPosition
+    const spliceNumber = selection.focusOffset ? 3 : 2
+    const childNode = this.props.element.element.childNodes[position]
+    const survivingNode = (
+      <span key={childNode.textContent.substring(0, 5)} data-inner-position={position}>
+        {childNode.textContent}
+      </span>
+    )
+    this.childNodes = update(
+      this.childNodes,
+      { $splice: [[position, spliceNumber, survivingNode]] }
+    )
 
     this.setState({ selection: { selected: false } })
   }

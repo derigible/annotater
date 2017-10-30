@@ -16,7 +16,7 @@ function getInnerPosition (node) {
     if (!node.parentNode) { return null }
     return getInnerPosition(node.parentNode)
   }
-  return node.dataset.innerPosition && parseInt(node.dataset.innerPosition, 10)
+  return (node.dataset.innerPosition && parseInt(node.dataset.innerPosition, 10)) || 0
 }
 
 @themeable(theme, styles)
@@ -62,12 +62,7 @@ export default class Annotate extends Component {
 
   getNodesBetween (left, right) {
     const nodes = []
-    // Switch start positions if left.id is greater than right.id (means right to lef
-    // selection)
-    const l = left.id < right.id ? left.id : right.id
-    const r = left.id < right.id ? right.id : left.id
-    console.log(l,r)
-    for (let i = l; i <= r; i++) {
+    for (let i = left; i <= right; i++) {
       nodes.push(this.nodeMap.get(i))
     }
     return nodes // will always have at least one node in it
@@ -84,20 +79,37 @@ export default class Annotate extends Component {
       this.clearSelection()
       return
     }
-    const selection = this.getNodesBetween(
-      this.getContainingParentNode(sel.anchorNode),
-      this.getContainingParentNode(sel.focusNode)
-    )
-    console.log(sel, selection)
+    const an = this.getContainingParentNode(sel.anchorNode)
+    const fn = this.getContainingParentNode(sel.focusNode)
+    const inLine = an.id <= fn.id
+    const ln = inLine ? an : fn
+    const rn = inLine ? fn : an
+    const anchorInnerPosition = getInnerPosition(inLine ? sel.anchorNode : sel.focusNode)
+    const focusInnerPosition = getInnerPosition(inLine ? sel.focusNode : sel.anchorNode)
+
+    const selection = this.getNodesBetween(ln.id, rn.id)
     selection.forEach((n) => {
       // eslint-disable-next-line no-param-reassign
       n.selection.selected = true
     })
-    selection[0].selection.anchorOffset = sel.anchorOffset
-    selection[0].selection.innerPosition = getInnerPosition(sel.anchorNode)
-    selection[selection.length - 1].selection.focusOffset = sel.focusOffset
-    selection[selection.length - 1].selection.innerPosition = getInnerPosition(sel.focusNode)
-    console.log('The selection', selection)
+
+    let anchorOffset
+    let focusOffset
+    if (an.id !== fn.id) {
+      anchorOffset = inLine ? sel.anchorOffset : sel.focusOffset
+      focusOffset = inLine ? sel.focusOffset : sel.anchorOffset
+    } else {
+      const norm = sel.anchorOffset < sel.focusOffset
+      // eslint-disable-next-line prefer-destructuring
+      anchorOffset = norm ? sel.anchorOffset : sel.focusOffset
+      // eslint-disable-next-line prefer-destructuring
+      focusOffset = norm ? sel.focusOffset : sel.anchorOffset
+    }
+    selection[0].selection.anchorOffset = anchorOffset
+    selection[0].selection.anchorInnerPosition = anchorInnerPosition
+    selection[selection.length - 1].selection.focusOffset = focusOffset
+    selection[selection.length - 1].selection.focusInnerPosition = focusInnerPosition
+    console.log(sel, selection)
     this.updateSelected(selection)
     this.setState({ selection })
     // window.getSelection().removeAllRanges()
