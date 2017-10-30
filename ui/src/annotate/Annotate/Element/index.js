@@ -21,8 +21,26 @@ function getInnerPosition (el) {
   return el.dataset && el.dataset.innerPosition && parseInt(el.dataset.innerPosition, 10)
 }
 
-function styleSelection () {
-  return { backgroundColor: 'blue' }
+function getRightNodeRange (selection, textLength) {
+  if (selection.anchorOffset && selection.focusOffset) {
+    return [selection.anchorOffset, selection.focusOffset]
+  } else if (!selection.anchorOffset && selection.focusOffset) {
+    return [selection.focusOffset, textLength]
+  }
+  return [selection.anchorOffset, textLength]
+}
+
+function styleSelection (selection, isRightNode = false) {
+  if (isRightNode) {
+    if (selection.anchorOffset && !selection.focusOffset) {
+      return { backgroundColor: 'blue' }
+    }
+    return {}
+  }
+  if (!selection.anchorOffset && selection.focusOffset) {
+    return { backgroundColor: 'blue' }
+  }
+  return {}
 }
 
 export default class Element extends Component {
@@ -78,23 +96,22 @@ export default class Element extends Component {
       (n) => getInnerPosition(n) === selection.innerPosition
     )
     const childNode = this.props.element.element.childNodes[innerIndexOf]
-    const lnRange = [0, selection.anchorOffset]
+    if (this.childNodeInSelection(childNode)) { return } // childNode will take care of selection
+    console.log(childNode)
+    const lnRange = [0, selection.anchorOffset ? selection.anchorOffset : selection.focusOffset]
     const ln = (
-      <span key={`${childNode.textContent.substring(...lnRange)}_left`} >
+      <span key={`${childNode.textContent.substring(...lnRange)}_left`} style={styleSelection(selection)} >
         {childNode.textContent.substring(...lnRange)}
       </span>
     )
-    const rnRange = [
-      selection.anchorOffset,
-      selection.focusOffset ? selection.focusOffset : childNode.textContent.length
-    ]
+    const rnRange = getRightNodeRange(selection, childNode.textContent.length)
     const rn = (
-      <span key={`${childNode.textContent.substring(...rnRange)}_right`} style={styleSelection()}>
+      <span key={`${childNode.textContent.substring(...rnRange)}_right`} style={styleSelection(selection, true)} >
         {childNode.textContent.substring(...rnRange)}
       </span>
     )
 
-    if (selection.focusOffset) {
+    if (selection.anchorOffset && selection.focusOffset) {
       const remainder = [selection.focusOffset, childNode.textContent.length]
       const remainderNode = (
         <span key={`${childNode.textContent.substring(...remainder)}_remainder`}>
@@ -111,6 +128,7 @@ export default class Element extends Component {
         { $splice: [[innerIndexOf, 1, ln, rn]] }
       )
     }
+    console.log(this.childNodes)
 
     this.setState({ selection: { ...selection, innerIndexOf } })
   }
@@ -130,6 +148,10 @@ export default class Element extends Component {
       { $splice: [[selection.innerIndexOf, spliceNumber, survivingNode]] }
     )
     this.setState({ selection: { selected: false } })
+  }
+
+  childNodeInSelection (childNode) {
+    return !!this.props.getElementDefinition(parseId(childNode))
   }
 
   renderChildNodes () {

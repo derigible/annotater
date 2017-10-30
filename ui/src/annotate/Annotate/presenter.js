@@ -89,6 +89,7 @@ export default class Annotate extends Component {
     selection[selection.length - 1].selection.innerPosition = getInnerPosition(sel.focusNode)
     this.updateSelected(selection)
     this.setState({ selection })
+    window.getSelection().removeAllRanges()
   }
 
   createAnnotation = (type, range, data) => {
