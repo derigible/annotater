@@ -19,6 +19,21 @@ function getInnerPosition (node) {
   return (node.dataset.innerPosition && parseInt(node.dataset.innerPosition, 10)) || 0
 }
 
+function relation (nodeA, nodeB) {
+  const nodeBId = parseId(nodeB)
+  let currentNode = nodeA
+  let parentNodeId = currentNode.parentNode && parseId(currentNode.parentNode)
+  while (parentNodeId !== undefined && parentNodeId !== nodeBId && currentNode) {
+    parentNodeId = currentNode.parentNode && parseId(currentNode.parentNode)
+    if (parentNodeId) {
+      currentNode = currentNode.parentNode
+    }
+  }
+  const childNodeId = parseId(currentNode)
+
+  return { parentNodeId, childNodeId }
+}
+
 @themeable(theme, styles)
 export default class Annotate extends Component {
   static propTypes = {
@@ -72,6 +87,13 @@ export default class Annotate extends Component {
     return this.nodeMap.get(id)
   }
 
+  isInline (an, fn, sel) {
+    const { parentNodeId } = relation(sel.anchorNode, sel.focusNode)
+    return parentNodeId === undefined
+      ? an.id <= fn.id
+      : getInnerPosition(sel.focusNode) > fn.component.getInnerPositionOfElementById(an.id)
+  }
+
   checkSelected = () => {
     const sel = window.getSelection()
     // No selection was actually made or selection is being canceled
@@ -82,7 +104,11 @@ export default class Annotate extends Component {
     const an = this.getContainingParentNode(sel.anchorNode)
     const fn = this.getContainingParentNode(sel.focusNode)
     if (an === null || fn === null) { return }
-    const inLine = an.id <= fn.id
+    // if an is a child of fn, need to figure out inner position it should be in
+    // and that will tell if still in line
+    const inLine = this.isInline(an, fn, sel)
+    console.log(inLine)
+
     const ln = inLine ? an : fn
     const rn = inLine ? fn : an
     const anchorInnerPosition = getInnerPosition(inLine ? sel.anchorNode : sel.focusNode)

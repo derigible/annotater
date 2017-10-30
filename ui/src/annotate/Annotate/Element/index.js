@@ -1,6 +1,7 @@
 import React, { Component } from 'react'
 import PropTypes from 'prop-types'
 import camelCase from 'lodash/camelCase'
+import findIndex from 'lodash/findIndex'
 import update from 'immutability-helper'
 
 export function parseId (el) {
@@ -54,7 +55,12 @@ export default class Element extends Component {
         style: PropTypes.object.isRequired
       }).isRequired
     }).isRequired,
-    getElementDefinition: PropTypes.func.isRequired
+    getElementDefinition: PropTypes.func.isRequired,
+    innerPosition: PropTypes.number
+  }
+
+  static defaultProps = {
+    innerPosition: null
   }
 
   state = {
@@ -84,14 +90,19 @@ export default class Element extends Component {
           clearSelection={this.props.clearSelection}
           element={element}
           getElementDefinition={this.props.getElementDefinition}
+          innerPosition={index}
         />
       )
     })
   }
 
+  getInnerPositionOfElementById (id) {
+    return findIndex(this.childNodes, (el) => parseId(el) === id )
+  }
+
   setSelection (selection) {
-    const anchorPosition = selection.anchorInnerPosition !== undefined ?
-      selection.anchorInnerPosition : selection.focusInnerPosition
+    const anchorPosition = selection.anchorInnerPosition !== undefined
+      ? selection.anchorInnerPosition : selection.focusInnerPosition
     const anchorChildNode = this.props.element.element.childNodes[anchorPosition]
 
     const lnRange = [0, selection.anchorOffset !== undefined ? selection.anchorOffset : selection.focusOffset]
@@ -101,8 +112,8 @@ export default class Element extends Component {
       </span>
     )
 
-    const focusPosition = selection.anchorInnerPosition !== undefined ?
-      selection.anchorInnerPosition : selection.focusInnerPosition
+    const focusPosition = selection.anchorInnerPosition !== undefined
+      ? selection.anchorInnerPosition : selection.focusInnerPosition
     const focusChildNode = this.props.element.element.childNodes[focusPosition]
     const rnRange = getRightNodeRange(selection, focusChildNode.textContent.length)
     const rn = (
@@ -167,13 +178,17 @@ export default class Element extends Component {
   }
 
   render () {
+    const { innerPosition } = this.props
     const { id, element } = this.props.element
     const Node = element.tagName.toLowerCase()
+
+    console.log('Innerposition', innerPosition)
 
     return (
       <Node
         data-position-id={id}
         style={{ ...getStyles(element.style), ...getSelection() }}
+        data-inner-position={innerPosition !== null ? innerPosition : undefined}
       >
         {this.renderChildNodes()}
       </Node>
