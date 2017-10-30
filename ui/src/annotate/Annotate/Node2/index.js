@@ -19,6 +19,7 @@ import capitalizeFirstLetter from '@instructure/ui-utils/lib/capitalizeFirstLett
 
 import * as nodeTypes from '../../nodeTypes'
 import * as colors from '../../colors'
+import { nodeDefinition } from '../../../react/customPropTypes'
 
 import styles from './styles.css'
 import theme from './theme'
@@ -29,9 +30,11 @@ export default class Node extends Component {
     cancelSelection: PropTypes.func,
     createAnnotation: PropTypes.func,
     node: PropTypes.shape({
-      id: PropTypes.string.isRequired,
-      annotations: PropTypes.array,
-      el: PropTypes.object
+      id: PropTypes.number.isRequired,
+      range: PropTypes.arrayOf(PropTypes.number),
+      selectionRange: PropTypes.arrayOf(PropTypes.number),
+      text: PropTypes.string.isRequired,
+      definitionNodes: PropTypes.arrayOf(nodeDefinition)
     }).isRequired
   }
 
@@ -221,16 +224,17 @@ export default class Node extends Component {
       <Text>
         <span
           data-id={this.props.node.id}
-          // className={this.getClassNames()}
-          // this is the problem - each element node needs to be converted into a react component
-          dangerouslySetInnerHTML={{ __html: this.props.node.el.outerHTML }}
+          className={this.getClassNames()}
+          dangerouslySetInnerHTML={{ __html: this.props.node.text }}
         />
       </Text>
     )
   }
 
   renderContent () {
-    return this.renderPlainTextNode()
+    return this.props.node.definitionNodes.length > 1
+      ? this.renderMultiTypePopover()
+      : this.renderPlainTextNode()
   }
 
   // add data-id to get the internal node detail so we can normalize range offsets

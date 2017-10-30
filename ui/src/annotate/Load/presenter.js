@@ -29,20 +29,19 @@ function getProps (overrides) {
   }
 }
 
+function tagChildren (node) {
+  node.childNodes && node.childNodes.forEach((n) => {
+    // eslint-disable-next-line no-param-reassign
+    n.dataset && (n.dataset.positionId = uniqueId())
+    tagChildren(n)
+  })
+}
+
 function tagElements (content) {
   const temp = document.createElement('div')
-  temp.innerHTML = content.replace(/<p[^>]*>/g, '<span>').replace(/<\/p>/g, '</span><br />')
-  const toTag = temp.childNodes
-  const domString = []
-  toTag.forEach((tag) => {
-    // eslint-disable-next-line no-param-reassign
-    tag.dataset && (tag.dataset.positionId = uniqueId())
-    domString.push(tag.outerHTML)
-  })
-  // Possible replace all p tags with br, which means that the data-position-id above breaks :{
-  // but may be the best option. look into further
-  // return domString.join('')
-  return domString.join('')
+  temp.innerHTML = content
+  tagChildren(temp)
+  return temp.innerHTML
 }
 
 export default class Load extends Component {

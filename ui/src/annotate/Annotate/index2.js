@@ -6,7 +6,7 @@ import * as appActions from '../../app/actions'
 import { nodeDefinition } from '../../react/customPropTypes'
 import * as persistence from '../persistence'
 
-import Annotate from './presenter'
+import Annotate from './presenter2'
 
 class AnnotateDataWrapper extends Component {
   static propTypes = {
@@ -66,7 +66,6 @@ class AnnotateDataWrapper extends Component {
     }
     return (
       <Annotate
-        annotations={{}}
         createAnnotation={this.createAnnotation}
         nodes={this.props.nodes}
         text={this.props.text}

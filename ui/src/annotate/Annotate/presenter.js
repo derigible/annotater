@@ -1,17 +1,12 @@
 import React, { Component } from 'react'
 import PropTypes from 'prop-types'
 import SortedMap from 'collections/sorted-map'
-import SortedSet from 'collections/sorted-set'
-import findIndex from 'lodash/findIndex'
-import update from 'immutability-helper'
 
 import ScreenReaderContent from '@instructure/ui-core/lib/components/ScreenReaderContent'
 import themeable from '@instructure/ui-themeable'
-
-import { nodeDefinition } from '../../react/customPropTypes'
 import * as nodeTypes from '../nodeTypes'
 
-import Node from './Node'
+import Element, { parseId } from './Element'
 
 import styles from './styles.css'
 import theme from './theme'
@@ -20,270 +15,88 @@ import theme from './theme'
 export default class Annotate extends Component {
   static propTypes = {
     createAnnotation: PropTypes.func.isRequired,
-    nodes: PropTypes.arrayOf(nodeDefinition).isRequired,
+    annotations: PropTypes.objectOf(
+      PropTypes.arrayOf(
+        PropTypes.shape({
+          type: PropTypes.oneOf(Object.values(nodeTypes)),
+          range: PropTypes.arrayOf(PropTypes.number)
+        })
+      )
+    ).isRequired,
     text: PropTypes.string.isRequired
-  }
-
-  static getDefinitionNodes (range, nodes) {
-    const definitionNodes = []
-    for (let i = 0; i < nodes.length; i++) {
-      const node = nodes[i]
-      if (
-        // initial condition - start of Component node is after persist start
-        node.range[0] <= range[0] &&
-        // case: persist end is before Component end but after Component start
-        (
-          (node.range[1] <= range[1] && node.range[1] > range[0]) ||
-          // case: persist end is after Component end
-          node.range[1] > range[0]
-        )
-      ) {
-        definitionNodes.push(node)
-      } else if (node.range[0] > range[0]) {
-        return definitionNodes // short cicruit - none of the nodes after this are in range
-      }
-    }
-    return definitionNodes
-  }
-
-  static getTypes (nodes) {
-    return nodes.map((n) => n.type)
-  }
-
-  static getSortedNodesAndRanges (unsortedNodes) {
-    const nodes = unsortedNodes.sort((nA, nB) => nA.range[0] - nB.range[0])
-    let ranges = nodes.reduce((memo, n) => (memo.concat(n.range)), [])
-    ranges = new SortedSet(ranges).toArray()
-    return { nodes, ranges }
-  }
-
-  static recursivelyFindContainingComponent (domNode, attr = 'data-position-id') {
-    if (domNode === undefined) { return null }
-    if (domNode.attributes[attr] === undefined) {
-      return Annotate.recursivelyFindContainingComponent(domNode.parentNode, attr)
-    }
-    return domNode
-  }
-
-  static createSelectionNode () {
-    return {
-      id: nodeTypes.SELECTION,
-      range: [],
-      type: nodeTypes.SELECTION
-    }
-  }
-
-  static removeSelectionType (nodeDefinitions) {
-    const index = findIndex(nodeDefinitions, (n) => n.type === nodeTypes.SELECTION)
-    return update(nodeDefinitions, { $splice: [[index, 1]] })
   }
 
   constructor (props) {
     super(props)
+    this.textContainer = document.createElement('div')
     this.nodeMap = new SortedMap()
+    this.topLevel = []
     this.state = { selection: {} }
   }
 
   componentWillMount () {
-    this.computeNodes(this.props.nodes)
+    this.textContainer.innerHTML = this.props.text
+    this.mapElement(this.textContainer)
+    this.textContainer.childNodes.forEach((n) => {
+      this.topLevel.push(n)
+    })
   }
 
-  componentWillUpdate (nextProps, nextState) {
-    const { selection } = this.state
-    const newSelection = nextState.selection
-    if (nextProps.nodes.length !== this.props.nodes.length) {
-      this.nodeMap.clear()
-      this.computeNodes(nextProps.nodes)
-    } else if (
-      selection.startOffset !== newSelection.startOffset ||
-      selection.endOffset !== newSelection.endOffset
-    ) {
-      this.mergeNodes(selection)
-      this.splitNodes(newSelection)
-      // window.getSelection().removeAllRanges()
-      // TODO: filter out all nodes in nodemap caught in between
-      // this range offset and only render the select node
-      setTimeout(() => {
-        const component = this[`node_${newSelection.startOffset}`]
-        component && component.showTypeMenu()
-      })
+  mapElement (element) {
+    if (element.dataset) {
+      const id = parseId(element)
+      id && this.nodeMap.set(id, { id, element })
     }
-  }
-
-  getClosestStartOffset (startOffset) {
-    const keys = Array.from(this.nodeMap.keys()) // we key on the start offset
-    let prev = keys[0]
-    // TODO: O(N) time. Can do better (possible performance issue)
-    for (let i = 1; i < this.nodeMap.length; i++) {
-      if (keys[i] >= startOffset) {
-        return prev
-      }
-      prev = keys[i]
-    }
-    return prev
-  }
-
-  getNormalizeOffset (selection) {
-    // TODO: will need to add data-position-id to new nodes
-    const baseNode = Annotate.recursivelyFindContainingComponent(selection.baseNode.parentNode).attributes['data-position-id'].value
-    const focusNode = Annotate.recursivelyFindContainingComponent(selection.focusNode.parentNode).attributes['data-position-id'].value
-    const startOffset = this.props.text.indexOf(`data-position-id="${baseNode}"`) + (`data-position-id="${baseNode}">`.length)
-    let endOffset = startOffset
-    if (baseNode !== focusNode) {
-      endOffset = this.props.text.indexOf(`data-position-id="${focusNode}"`) + (`data-position-id="${baseNode}">`.length)
-    }
-    return { normalizeStartOffset: startOffset, normalizeEndOffset: endOffset }
-  }
-
-  setRef = (id) => (node) => {
-    this[`node_${id}`] = node
-  }
-
-  computeNodes (peristedNodes) {
-    const { nodes, ranges } = Annotate.getSortedNodesAndRanges(peristedNodes)
-    for (let i = 1; i < ranges.length; i++) {
-      const startOffset = ranges[i - 1]
-      const endOffset = ranges[i]
-      const range = [startOffset, endOffset]
-
-      const definitionNodes = Annotate.getDefinitionNodes(range, nodes)
-      this.nodeMap.set(range[0], this.createNode(range, definitionNodes))
-    }
-  }
-
-  mergeNodes (selection) {
-    if (selection.startOffset === undefined) { return } // no selection has been made previously
-    // remove old node selection by merging with node to the left
-    const originalStart = this.getClosestStartOffset(selection.startOffset)
-    const originalEnd = this.getClosestStartOffset(selection.endOffset)
-    this.mergeNode(selection.endOffset, originalEnd, true)
-    this.mergeNode(selection.startOffset, originalStart)
-    this.nodeMap.delete(selection.endOffset)
-    if (selection.startOffset !== 0) { this.nodeMap.delete(selection.startOffset) }
-  }
-
-  mergeNode (nodeKey, originalNodeKey, removeSelectionType) {
-    const dyingNode = this.nodeMap.get(nodeKey)
-    const survivingNode = this.nodeMap.get(originalNodeKey)
-    if (removeSelectionType) {
-      survivingNode.definitionNodes = Annotate.removeSelectionType(survivingNode.definitionNodes)
-    }
-    this.nodeMap.set(
-      originalNodeKey,
-      this.createNode([originalNodeKey, dyingNode.range[1]], survivingNode.definitionNodes)
-    )
-  }
-
-  splitNodes (newSelection) {
-    if (newSelection.startOffset === undefined) { return } // selection was removed on this update
-    const newSelectionRange = [newSelection.startOffset, newSelection.endOffset]
-    // find closest start offset to split/merge the node
-    const startNodeKey = this.getClosestStartOffset(newSelection.startOffset)
-    // find closest end offset to possibly split the node
-    const endNodeKey = this.getClosestStartOffset(newSelection.endOffset)
-    if (startNodeKey !== endNodeKey) {
-      this.splitNode(
-        startNodeKey,
-        newSelection.startOffset,
-        newSelectionRange
-      )
-      this.splitNode(
-        endNodeKey,
-        newSelection.endOffset,
-        newSelectionRange,
-        false,
-        true
-      )
-    } else {
-      this.splitNode(
-        startNodeKey,
-        newSelection.startOffset,
-        newSelectionRange
-      )
-      // the new startOffset has now been created as a node, we will
-      // need to split that node to apply the end node correctly
-      this.splitNode(
-        newSelection.startOffset,
-        newSelection.endOffset,
-        newSelectionRange,
-        false,
-        true
-      )
-    }
-  }
-
-  splitNode (nodeKey, splitOffset, selectionRange, selectionOnRight = true, removeSelection = false) {
-    const toSplit = this.nodeMap.get(nodeKey)
-
-    let leftNodeDefinitions = toSplit.definitionNodes
-    // If removeSelection is true, means that the node on left already has selection
-    if (!selectionOnRight && removeSelection) {
-      leftNodeDefinitions = leftNodeDefinitions.concat([Annotate.createSelectionNode()])
-    }
-    const leftNode = this.createNode([nodeKey, splitOffset], leftNodeDefinitions, selectionRange)
-
-    let rightNodeDefinitions = toSplit.definitionNodes
-    if (selectionOnRight) {
-      rightNodeDefinitions = rightNodeDefinitions.concat([Annotate.createSelectionNode()])
-    } else if (removeSelection) {
-      rightNodeDefinitions = Annotate.removeSelectionType(rightNodeDefinitions)
-    }
-    const rightNode = this.createNode([splitOffset, toSplit.range[1]], rightNodeDefinitions, selectionRange)
-
-    this.nodeMap.set(nodeKey, leftNode)
-    this.nodeMap.set(splitOffset, rightNode)
+    element.childNodes && element.childNodes.forEach((el) => {
+      this.mapElement(el)
+    })
   }
 
   checkSelected = () => {
     const selection = window.getSelection()
-    const { normalizeStartOffset, normalizeEndOffset } = this.getNormalizeOffset(selection)
-    const startOffset = selection.anchorOffset + normalizeStartOffset
-    const endOffset = selection.focusOffset + normalizeEndOffset
-    if (startOffset === endOffset) {
-      // Click with no selection, remove selection
-      this.cancelSelection()
-    } else if (startOffset > endOffset) {
-      this.setState({ selection: { startOffset: endOffset, endOffset: startOffset } })
-    } else {
-      this.setState({ selection: { startOffset, endOffset } })
-    }
-  }
-
-  createNode = (range, definitionNodes, selectionRange = []) => {
-    const node = {
-      id: range[0],
-      range,
-      selectionRange,
-      text: this.props.text.substring(...range),
-      definitionNodes
-    }
-    node.uiNode = this.renderNode(node)
-    return node
-  }
-
-  cancelSelection = () => {
-    this.setState({ selection: {} })
+    console.log(selection)
+    // get Nodes to split, add selection annotation an split
+    //  left node -> split and all nodes to right of offset recursively get
+    //  selection annotation
+    //  right node -> split and all node to the left offset recursively get
+    //  selection annotation
+    //  in between -> all Node components receive annotation of Selection
+    const leftNode = this.getParentNodeRecursively(selection.anchorNode)
+    const rightNode = this.getParentNodeRecursively(selection.focusNode)
+    const nodesBetween = this.getNodesBetween(leftNode, rightNode)
+    // {
+    //  id: 'span.2.span.sup.span',
+    //  offset: 5
+    //  type: 'end'
+    // } =>
+    // <span>
+    //  <span></span>
+    //  <span>
+    //    <sup>
+    //      <span>
+    //        abcdef|this is the described place|g
+    //      </span>
+    //      alad
+    //    </sup>
+    //    adfag
+    //  </span>
+    //  ddfaga
+    //  <span>asd</span>
+    // <span>
+    // In english: split at offset five of the first span of the first sup of
+    // the second span of the root span
+    //
+    // In node Component, index all childNodes with the
   }
 
   createAnnotation = (type, range, data) => {
-    this.cancelSelection()
     this.props.createAnnotation(type, range, data)
   }
 
   renderNodes () {
-    return this.nodeMap.map((node) => node.uiNode)
-  }
-
-  renderNode (node) {
-    return (
-      <Node
-        key={`node_${node.id}`}
-        ref={this.setRef(node.id)}
-        cancelSelection={this.cancelSelection}
-        createAnnotation={this.createAnnotation}
-        node={node}
-      />
-    )
+    return this.topLevel.map((el) => {
+      return <Element key={parseId(el)} element={el} />
+    })
   }
 
   render () {
