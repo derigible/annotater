@@ -42,7 +42,7 @@ export default class Annotate extends Component {
     this.textContainer.innerHTML = this.props.text
     this.mapElement(this.textContainer)
     this.textContainer.childNodes.forEach((n) => {
-      this.topLevel.push(n)
+      this.topLevel.push(this.nodeMap.get(parseId(n)))
     })
   }
 
@@ -64,19 +64,17 @@ export default class Annotate extends Component {
     return nodes // will always have at least one node in it
   }
 
-  mapElement (element) {
-    if (element.dataset) {
-      const id = parseId(element)
-      id && this.nodeMap.set(id, { id, element, selection: { selected: false } })
-    }
-    element.childNodes && element.childNodes.forEach((el) => {
-      this.mapElement(el)
-    })
+  getElementDefinition = (id) => {
+    return this.nodeMap.get(id)
   }
 
   checkSelected = () => {
     const sel = window.getSelection()
-    console.log(sel)
+    // No selection was actually made or selection is being canceled
+    if (sel.anchorNode === sel.focusNode && sel.anchorOffset === sel.focusOffset) {
+      this.clearSelection()
+      return
+    }
     const selection = this.getNodesBetween(
       this.getContainingParentNode(sel.anchorNode),
       this.getContainingParentNode(sel.focusNode)
@@ -89,6 +87,7 @@ export default class Annotate extends Component {
     selection[0].selection.innerPosition = getInnerPosition(sel.anchorNode)
     selection[selection.length - 1].selection.focusOffset = sel.focusOffset
     selection[selection.length - 1].selection.innerPosition = getInnerPosition(sel.focusNode)
+    this.updateSelected(selection)
     this.setState({ selection })
   }
 
@@ -100,18 +99,34 @@ export default class Annotate extends Component {
     this.state.selection.forEach((s) => {
       // eslint-disable-next-line no-param-reassign
       s.selection = { selected: false }
+      s.component.clearSelection()
+    })
+    this.setState({ selection: [] })
+  }
+
+  updateSelected = (nodes) => {
+    this.clearSelection()
+    nodes.forEach((n) => {
+      n.component.setSelection(n.selection)
     })
   }
 
-  getElementDefinition = (id) => {
-    return this.nodeMap.get(id)
+  mapElement (element) {
+    if (element.dataset) {
+      const id = parseId(element)
+      id && this.nodeMap.set(id, { id, element, selection: { selected: false } })
+    }
+    element.childNodes && element.childNodes.forEach((el) => {
+      this.mapElement(el)
+    })
   }
 
   renderNodes () {
     return this.topLevel.map((el) => {
       return (
         <Element
-          key={parseId(el)}
+          key={el.id}
+          clearSelection={this.clearSelection}
           element={el}
           getElementDefinition={this.getElementDefinition}
         />
