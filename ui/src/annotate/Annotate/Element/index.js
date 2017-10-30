@@ -21,9 +21,9 @@ function getStyles (style) {
 }
 
 function getRightNodeRange (selection, textLength) {
-  if (selection.anchorOffset && selection.focusOffset) {
+  if (selection.anchorOffset !== undefined && selection.focusOffset) {
     return [selection.anchorOffset, selection.focusOffset]
-  } else if (!selection.anchorOffset && selection.focusOffset) {
+  } else if (selection.anchorOffset === undefined && selection.focusOffset) {
     return [selection.focusOffset, textLength]
   }
   return [selection.anchorOffset, textLength]
@@ -31,12 +31,12 @@ function getRightNodeRange (selection, textLength) {
 
 function styleSelection (selection, isRightNode = false) {
   if (isRightNode) {
-    if (selection.anchorOffset) {
+    if (selection.anchorOffset !== undefined) {
       return { backgroundColor: 'blue' }
     }
     return {}
   }
-  if (!selection.anchorOffset && selection.focusOffset) {
+  if (selection.anchorOffset === undefined && selection.focusOffset) {
     return { backgroundColor: 'blue' }
   }
   return {}
@@ -92,8 +92,8 @@ export default class Element extends Component {
   setSelection (selection) {
     const anchorPosition = selection.anchorInnerPosition ? selection.anchorInnerPosition : selection.focusInnerPosition
     const anchorChildNode = this.props.element.element.childNodes[anchorPosition]
-    if (this.childNodeInSelection(anchorChildNode) && !isTextNode(anchorChildNode)) { return } // childNode will take care of selection
-    const lnRange = [0, selection.anchorOffset ? selection.anchorOffset : selection.focusOffset]
+
+    const lnRange = [0, selection.anchorOffset !== undefined ? selection.anchorOffset : selection.focusOffset]
     const ln = (
       <span key={`${anchorChildNode.textContent.substring(...lnRange)}_left`} style={styleSelection(selection)} >
         {anchorChildNode.textContent.substring(...lnRange)}
@@ -109,7 +109,7 @@ export default class Element extends Component {
       </span>
     )
 
-    if (selection.anchorOffset && selection.focusOffset) {
+    if (selection.anchorOffset !== undefined && selection.focusOffset) {
       const remainder = [selection.focusOffset, focusChildNode.textContent.length]
       const remainderNode = (
         <span key={`${focusChildNode.textContent.substring(...remainder)}_remainder`}>
