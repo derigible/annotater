@@ -103,7 +103,6 @@ export default class Element extends Component {
     } else if (selection.anchorInnerPosition !== selection.focusInnerPosition) {
       const l = this.splitAnchorNode(selection)
       const r = this.splitFocusNode(selection)
-      debugger
       this.childNodes = update(
         this.childNodes,
         { $splice: [
@@ -189,28 +188,41 @@ export default class Element extends Component {
   }
 
   clearSelection () {
-    // TODO fix clear selection across nodes
     const { selection } = this.state
     const { anchorPosition, focusPosition } = selection
-    const position = anchorPosition !== undefined ? anchorPosition : focusPosition
-    const spliceNumber = selection.focusOffset ? 3 : 2
-    const childNode = this.props.element.element.childNodes[position]
-    const survivingNode = (
-      <span key={childNode.textContent.substring(0, 5)} data-inner-position={position}>
-        {childNode.textContent}
-      </span>
-    )
+    const splices = []
+    if (anchorPosition !== undefined) {
+      const anchorNode = this.props.element.element.childNodes[anchorPosition]
+      const spliceNumber = anchorPosition === focusPosition ? 3 : 2
+      const survivingNode = (
+        <span key={anchorNode.textContent.substring(0, 5)} data-inner-position={anchorPosition}>
+          {anchorNode.textContent}
+        </span>
+      )
+      splices.push([anchorPosition, spliceNumber, survivingNode])
+    }
+    if (focusPosition !== undefined && anchorPosition !== focusPosition) {
+      const nodePosition = anchorPosition !== undefined ? focusPosition - 1 : focusPosition
+      const focusNode = this.props.element.element.childNodes[nodePosition]
+      const spliceNumber = 2
+      const survivingNode = (
+        <span key={focusNode.textContent.substring(0, 5)} data-inner-position={focusPosition}>
+          {focusNode.textContent}
+        </span>
+      )
+      splices.push([nodePosition, spliceNumber, survivingNode])
+    }
     this.childNodes = update(
       this.childNodes,
-      { $splice: [[position, spliceNumber, survivingNode]] }
+      { $splice: splices }
     )
 
     this.setState({ selection: { selected: false } })
   }
 
-  childNodeInSelection (childNode) {
-    return !!this.props.getElementDefinition(parseId(childNode))
-  }
+  // childNodeInSelection (childNode) {
+  //   return !!this.props.getElementDefinition(parseId(childNode))
+  // }
 
   renderChildNodes () {
     return this.childNodes
