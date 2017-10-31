@@ -22,16 +22,22 @@ function getInnerPosition (node) {
 function relation (nodeA, nodeB) {
   const nodeBId = parseId(nodeB)
   let currentNode = nodeA
+  let prevNode = nodeA
   let parentNodeId = currentNode.parentNode && parseId(currentNode.parentNode)
   while (parentNodeId !== undefined && parentNodeId !== nodeBId && currentNode) {
     parentNodeId = currentNode.parentNode && parseId(currentNode.parentNode)
-    if (parentNodeId) {
-      currentNode = currentNode.parentNode
-    }
+    prevNode = currentNode
+    currentNode = currentNode.parentNode
   }
-  const childNodeId = parseId(currentNode)
+  const childNodeId = parseId(prevNode)
 
   return { parentNodeId, childNodeId }
+}
+
+function isInline (an, fn, sel, parentNodeId) {
+  return parentNodeId === undefined
+    ? an.id <= fn.id
+    : getInnerPosition(sel.focusNode) > fn.component.getInnerPositionOfElementById(an.id)
 }
 
 @themeable(theme, styles)
@@ -87,13 +93,6 @@ export default class Annotate extends Component {
     return this.nodeMap.get(id)
   }
 
-  isInline (an, fn, sel) {
-    const { parentNodeId } = relation(sel.anchorNode, sel.focusNode)
-    return parentNodeId === undefined
-      ? an.id <= fn.id
-      : getInnerPosition(sel.focusNode) > fn.component.getInnerPositionOfElementById(an.id)
-  }
-
   checkSelected = () => {
     const sel = window.getSelection()
     // No selection was actually made or selection is being canceled
@@ -104,17 +103,21 @@ export default class Annotate extends Component {
     const an = this.getContainingParentNode(sel.anchorNode)
     const fn = this.getContainingParentNode(sel.focusNode)
     if (an === null || fn === null) { return }
+    const { parentNodeId } = relation(an.element, fn.element)
     // if an is a child of fn, need to figure out inner position it should be in
     // and that will tell if still in line
-    const inLine = this.isInline(an, fn, sel)
-    console.log(inLine)
+    const inLine = isInline(an, fn, sel, parentNodeId)
 
     const ln = inLine ? an : fn
     const rn = inLine ? fn : an
     const anchorInnerPosition = getInnerPosition(inLine ? sel.anchorNode : sel.focusNode)
     const focusInnerPosition = getInnerPosition(inLine ? sel.focusNode : sel.anchorNode)
-
-    const selection = this.getNodesBetween(ln.id, rn.id)
+    // if inline but has a parentNodeId, means that ln.id > rn.id even though ln is first
+    // (confusing, i know. Need to think of something better eventually)
+    const selection = this.getNodesBetween(
+      parentNodeId ? rn.id : ln.id,
+      parentNodeId ? ln.id : rn.id
+    )
     selection.forEach((n) => {
       // eslint-disable-next-line no-param-reassign
       n.selection.selected = true
@@ -132,11 +135,10 @@ export default class Annotate extends Component {
       // eslint-disable-next-line prefer-destructuring
       focusOffset = norm ? sel.focusOffset : sel.anchorOffset
     }
-    selection[0].selection.anchorOffset = anchorOffset
-    selection[0].selection.anchorInnerPosition = anchorInnerPosition
-    selection[selection.length - 1].selection.focusOffset = focusOffset
-    selection[selection.length - 1].selection.focusInnerPosition = focusInnerPosition
-    console.log(sel, selection)
+    selection[parentNodeId ? selection.length - 1 : 0].selection.anchorOffset = anchorOffset
+    selection[parentNodeId ? selection.length - 1 : 0].selection.anchorInnerPosition = anchorInnerPosition
+    selection[parentNodeId ? 0 : selection.length - 1].selection.focusOffset = focusOffset
+    selection[parentNodeId ? 0 : selection.length - 1].selection.focusInnerPosition = focusInnerPosition
     this.updateSelected(selection)
     this.setState({ selection })
     window.getSelection().removeAllRanges()

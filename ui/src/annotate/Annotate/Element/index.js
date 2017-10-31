@@ -136,14 +136,13 @@ export default class Element extends Component {
     } else {
       this.childNodes = update(
         this.childNodes,
-        { $splice: [[0, 1, ln, rn]] }
+        { $splice: [[focusPosition, 1, ln, rn]] }
       )
     }
 
     this.setState({
       selection: {
         ...selection,
-        // New nodes were created, offset increased by 1
         anchorPosition: anchorPosition,
         focusPosition: focusPosition
       }
@@ -181,8 +180,6 @@ export default class Element extends Component {
     const { innerPosition } = this.props
     const { id, element } = this.props.element
     const Node = element.tagName.toLowerCase()
-
-    console.log('Innerposition', innerPosition)
 
     return (
       <Node
