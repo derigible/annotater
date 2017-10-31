@@ -34,12 +34,6 @@ function relation (nodeA, nodeB) {
   return { parentNodeId, childNodeId }
 }
 
-function isInline (an, fn, sel, parentNodeId) {
-  return parentNodeId === undefined
-    ? an.id <= fn.id
-    : getInnerPosition(sel.focusNode) > fn.component.getInnerPositionOfElementById(an.id)
-}
-
 @themeable(theme, styles)
 export default class Annotate extends Component {
   static propTypes = {
@@ -103,10 +97,12 @@ export default class Annotate extends Component {
     const an = this.getContainingParentNode(sel.anchorNode)
     const fn = this.getContainingParentNode(sel.focusNode)
     if (an === null || fn === null) { return }
-    const { parentNodeId } = relation(an.element, fn.element)
-    // if an is a child of fn, need to figure out inner position it should be in
-    // and that will tell if still in line
-    const inLine = isInline(an, fn, sel, parentNodeId)
+    // eslint-disable-next-line no-bitwise
+    const inLine = sel.anchorNode.compareDocumentPosition(sel.focusNode) & Node.DOCUMENT_POSITION_FOLLOWING
+    const { parentNodeId } = relation(
+      inLine ? an.element : fn.element,
+      inLine ? fn.element : an.element
+    )
 
     const ln = inLine ? an : fn
     const rn = inLine ? fn : an
@@ -139,6 +135,7 @@ export default class Annotate extends Component {
     selection[parentNodeId ? selection.length - 1 : 0].selection.anchorInnerPosition = anchorInnerPosition
     selection[parentNodeId ? 0 : selection.length - 1].selection.focusOffset = focusOffset
     selection[parentNodeId ? 0 : selection.length - 1].selection.focusInnerPosition = focusInnerPosition
+
     this.updateSelected(selection)
     this.setState({ selection })
     window.getSelection().removeAllRanges()
