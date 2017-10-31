@@ -21,26 +21,8 @@ function getStyles (style) {
   return inlineStyles
 }
 
-function getRightNodeRange (selection, textLength) {
-  if (selection.anchorOffset !== undefined && selection.focusOffset) {
-    return [selection.anchorOffset, selection.focusOffset]
-  } else if (selection.anchorOffset === undefined && selection.focusOffset) {
-    return [selection.focusOffset, textLength]
-  }
-  return [selection.anchorOffset, textLength]
-}
-
-function styleSelection (selection, isRightNode = false) {
-  if (isRightNode) {
-    if (selection.anchorOffset !== undefined) {
-      return { backgroundColor: 'blue' }
-    }
-    return {}
-  }
-  if (selection.anchorOffset === undefined && selection.focusOffset) {
-    return { backgroundColor: 'blue' }
-  }
-  return {}
+function styleSelection () {
+  return { backgroundColor: 'blue' }
 }
 
 export default class Element extends Component {
@@ -97,59 +79,117 @@ export default class Element extends Component {
   }
 
   getInnerPositionOfElementById (id) {
-    return findIndex(this.childNodes, (el) => parseId(el) === id )
+    return findIndex(this.childNodes, (el) => parseId(el) === id)
   }
 
   setSelection (selection) {
-    const anchorPosition = selection.anchorInnerPosition !== undefined
-      ? selection.anchorInnerPosition : selection.focusInnerPosition
-    const anchorChildNode = this.props.element.element.childNodes[anchorPosition]
-
-    const lnRange = [0, selection.anchorOffset !== undefined ? selection.anchorOffset : selection.focusOffset]
-    const ln = (
-      <span key={`${anchorChildNode.textContent.substring(...lnRange)}_left`} style={styleSelection(selection)} >
-        {anchorChildNode.textContent.substring(...lnRange)}
-      </span>
-    )
-
-    const focusPosition = selection.anchorInnerPosition !== undefined
-      ? selection.anchorInnerPosition : selection.focusInnerPosition
-    const focusChildNode = this.props.element.element.childNodes[focusPosition]
-    const rnRange = getRightNodeRange(selection, focusChildNode.textContent.length)
-    const rn = (
-      <span key={`${focusChildNode.textContent.substring(...rnRange)}_right`} style={styleSelection(selection, true)} >
-        {focusChildNode.textContent.substring(...rnRange)}
-      </span>
-    )
-
-    if (selection.anchorOffset !== undefined && selection.focusOffset) {
-      const remainder = [selection.focusOffset, focusChildNode.textContent.length]
-      const remainderNode = (
-        <span key={`${focusChildNode.textContent.substring(...remainder)}_remainder`}>
-          {focusChildNode.textContent.substring(...remainder)}
-        </span>
-      )
+    let anchorPosition = selection.anchorInnerPosition
+    let focusPosition = selection.focusInnerPosition
+    // only anchorPosition
+    if (selection.focusInnerPosition === undefined) {
+      const { ln, rn } = this.splitAnchorNode(selection)
       this.childNodes = update(
         this.childNodes,
-        { $splice: [[selection.anchorInnerPosition, 1, ln, rn, remainderNode]] }
+        { $splice: [[selection.anchorInnerPosition, 1, ln, rn]] }
       )
+    // only focusPosition
+    } else if (selection.anchorInnerPosition === undefined) {
+      const { ln, rn } = this.splitFocusNode(selection)
+      this.childNodes = update(
+        this.childNodes,
+        { $splice: [[selection.focusInnerPosition, 1, ln, rn]] }
+      )
+    // same node, different inner positions
+    } else if (selection.anchorInnerPosition !== selection.focusInnerPosition) {
+      const l = this.splitAnchorNode(selection)
+      const r = this.splitFocusNode(selection)
+      debugger
+      this.childNodes = update(
+        this.childNodes,
+        { $splice: [
+          [selection.anchorInnerPosition, 1, l.ln, l.rn],
+          [selection.focusInnerPosition + 1, 1, r.ln, r.rn]
+        ] }
+      )
+      anchorPosition = selection.anchorInnerPosition
+      focusPosition = selection.focusInnerPosition + 1
+    // same node, same inner positions
     } else {
+      const { rn, ln, remainderNode } = this.splitSameNode(selection)
       this.childNodes = update(
         this.childNodes,
-        { $splice: [[focusPosition, 1, ln, rn]] }
+        { $splice: [[selection.focusInnerPosition, 1, ln, rn, remainderNode]] }
       )
     }
 
     this.setState({
       selection: {
         ...selection,
-        anchorPosition: anchorPosition,
-        focusPosition: focusPosition
+        anchorPosition,
+        focusPosition
       }
     })
   }
 
+  splitAnchorNode (selection) {
+    const node = this.props.element.element.childNodes[selection.anchorInnerPosition]
+    const lRange = [0, selection.anchorOffset]
+    const ln = (
+      <span key={`${node.textContent.substring(...lRange)}_left`} >
+        {node.textContent.substring(...lRange)}
+      </span>
+    )
+    const rRange = [selection.anchorOffset, node.textContent.length]
+    const rn = (
+      <span key={`${node.textContent.substring(...rRange)}_right`} style={styleSelection()} >
+        {node.textContent.substring(...rRange)}
+      </span>
+    )
+    return { ln, rn }
+  }
+
+  splitFocusNode (selection) {
+    const node = this.props.element.element.childNodes[selection.focusInnerPosition]
+    const lRange = [0, selection.focusOffset]
+    const ln = (
+      <span key={`${node.textContent.substring(...lRange)}_left`} style={styleSelection()} >
+        {node.textContent.substring(...lRange)}
+      </span>
+    )
+    const rRange = [selection.focusOffset, node.textContent.length]
+    const rn = (
+      <span key={`${node.textContent.substring(...rRange)}_right`} >
+        {node.textContent.substring(...rRange)}
+      </span>
+    )
+    return { ln, rn }
+  }
+
+  splitSameNode (selection) {
+    const node = this.props.element.element.childNodes[selection.focusInnerPosition]
+    const lRange = [0, selection.anchorOffset]
+    const ln = (
+      <span key={`${node.textContent.substring(...lRange)}_left`} >
+        {node.textContent.substring(...lRange)}
+      </span>
+    )
+    const rRange = [selection.anchorOffset, selection.focusOffset]
+    const rn = (
+      <span key={`${node.textContent.substring(...rRange)}_right`} style={styleSelection()} >
+        {node.textContent.substring(...rRange)}
+      </span>
+    )
+    const remainder = [selection.focusOffset, node.textContent.length]
+    const remainderNode = (
+      <span key={`${node.textContent.substring(...remainder)}_remainder`}>
+        {node.textContent.substring(...remainder)}
+      </span>
+    )
+    return { ln, rn, remainderNode }
+  }
+
   clearSelection () {
+    // TODO fix clear selection across nodes
     const { selection } = this.state
     const { anchorPosition, focusPosition } = selection
     const position = anchorPosition !== undefined ? anchorPosition : focusPosition
