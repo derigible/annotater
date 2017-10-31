@@ -59,7 +59,8 @@ export default class Element extends Component {
     this.props.element.element.childNodes.forEach((el, index) => {
       if (isTextNode(el)) {
         this.childNodes.push(
-          <span key={el.textContent.substring(0, 5)} data-inner-position={index}>
+          // eslint-disable-next-line react/no-array-index-key
+          <span key={index} data-inner-position={index}>
             {el.textContent}
           </span>
         )
@@ -68,7 +69,8 @@ export default class Element extends Component {
       const element = this.props.getElementDefinition(parseId(el))
       this.childNodes.push(
         <Element
-          key={element.id}
+          // eslint-disable-next-line react/no-array-index-key
+          key={index}
           clearSelection={this.props.clearSelection}
           element={element}
           getElementDefinition={this.props.getElementDefinition}
@@ -76,6 +78,7 @@ export default class Element extends Component {
         />
       )
     })
+    console.log(this.childNodes)
   }
 
   getInnerPositionOfElementById (id) {
@@ -134,13 +137,13 @@ export default class Element extends Component {
     const node = this.props.element.element.childNodes[selection.anchorInnerPosition]
     const lRange = [0, selection.anchorOffset]
     const ln = (
-      <span key={`${node.textContent.substring(...lRange)}_left`} >
+      <span key={`${selection.anchorInnerPosition}_left`} >
         {node.textContent.substring(...lRange)}
       </span>
     )
     const rRange = [selection.anchorOffset, node.textContent.length]
     const rn = (
-      <span key={`${node.textContent.substring(...rRange)}_right`} style={styleSelection()} >
+      <span key={`${selection.anchorInnerPosition}_right`} style={styleSelection()} >
         {node.textContent.substring(...rRange)}
       </span>
     )
@@ -151,13 +154,13 @@ export default class Element extends Component {
     const node = this.props.element.element.childNodes[selection.focusInnerPosition]
     const lRange = [0, selection.focusOffset]
     const ln = (
-      <span key={`${node.textContent.substring(...lRange)}_left`} style={styleSelection()} >
+      <span key={`${selection.focusInnerPosition}_left`} style={styleSelection()} >
         {node.textContent.substring(...lRange)}
       </span>
     )
     const rRange = [selection.focusOffset, node.textContent.length]
     const rn = (
-      <span key={`${node.textContent.substring(...rRange)}_right`} >
+      <span key={`${selection.focusInnerPosition}_right`} >
         {node.textContent.substring(...rRange)}
       </span>
     )
@@ -168,19 +171,19 @@ export default class Element extends Component {
     const node = this.props.element.element.childNodes[selection.focusInnerPosition]
     const lRange = [0, selection.anchorOffset]
     const ln = (
-      <span key={`${node.textContent.substring(...lRange)}_left`} >
+      <span key="left" >
         {node.textContent.substring(...lRange)}
       </span>
     )
     const rRange = [selection.anchorOffset, selection.focusOffset]
     const rn = (
-      <span key={`${node.textContent.substring(...rRange)}_right`} style={styleSelection()} >
+      <span key="right" style={styleSelection()} >
         {node.textContent.substring(...rRange)}
       </span>
     )
     const remainder = [selection.focusOffset, node.textContent.length]
     const remainderNode = (
-      <span key={`${node.textContent.substring(...remainder)}_remainder`}>
+      <span key="remainder">
         {node.textContent.substring(...remainder)}
       </span>
     )
@@ -195,7 +198,7 @@ export default class Element extends Component {
       const anchorNode = this.props.element.element.childNodes[anchorPosition]
       const spliceNumber = anchorPosition === focusPosition ? 3 : 2
       const survivingNode = (
-        <span key={anchorNode.textContent.substring(0, 5)} data-inner-position={anchorPosition}>
+        <span key={`${anchorPosition}`} data-inner-position={anchorPosition}>
           {anchorNode.textContent}
         </span>
       )
@@ -206,7 +209,7 @@ export default class Element extends Component {
       const focusNode = this.props.element.element.childNodes[nodePosition]
       const spliceNumber = 2
       const survivingNode = (
-        <span key={focusNode.textContent.substring(0, 5)} data-inner-position={focusPosition}>
+        <span key={`${focusPosition}`} data-inner-position={focusPosition}>
           {focusNode.textContent}
         </span>
       )
