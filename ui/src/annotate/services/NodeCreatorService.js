@@ -1,4 +1,4 @@
-import { v4 as uuid } from 'uuid'
+import nanoid from 'nanoid'
 
 import * as nodeTypes from '../nodeTypes'
 import * as colors from '../colors'
@@ -31,7 +31,7 @@ function createHighlightNode (
   data = { color: Object.values(colors)[Math.floor(Math.random() * Object.values(colors).length)] }
 ) {
   return {
-    id: uuid(),
+    id: nanoid(),
     range,
     type: nodeTypes.HIGHLIGHT,
     data
@@ -40,7 +40,7 @@ function createHighlightNode (
 
 function createTextNode (range, data = { color: 'default', size: 'default' }) {
   return {
-    id: uuid(),
+    id: nanoid(),
     range,
     type: nodeTypes.TEXT,
     data
@@ -49,7 +49,7 @@ function createTextNode (range, data = { color: 'default', size: 'default' }) {
 
 function createTagNode (range, data) {
   return {
-    id: uuid(),
+    id: nanoid(),
     range,
     type: nodeTypes.TAG,
     data
@@ -58,7 +58,7 @@ function createTagNode (range, data) {
 
 function createErrorNode (range, data) {
   return {
-    id: uuid(),
+    id: nanoid(),
     range,
     type: nodeTypes.ERROR,
     data

@@ -1,7 +1,7 @@
 import React, { Component } from 'react'
 import PropTypes from 'prop-types'
+import uniqueId from 'lodash/uniqueId'
 import debounce from 'lodash/debounce'
-import nanoid from 'nanoid'
 
 import Button from '@instructure/ui-core/lib/components/Button'
 import Checkbox from '@instructure/ui-core/lib/components/Checkbox'
@@ -29,18 +29,12 @@ function getProps (overrides) {
   }
 }
 
-const tags = new Set(['DIV', 'P', 'UL', 'OL', 'TABLE', 'SPAN', 'TD', 'TH', 'LI', 'SUP', 'SUB', 'STRONG', 'EM', 'A'])
-
-function shouldTag (tagName) {
-  return tags.has(tagName) || /H\d+/.test(tagName)
-}
+let childrenTag = 1
 
 function tagChildren (node) {
   node.childNodes && node.childNodes.forEach((n) => {
-    if (n.tagName && shouldTag(n.tagName)) {
-      // eslint-disable-next-line no-param-reassign
-      n.dataset.id = nanoid(10)
-    }
+    // eslint-disable-next-line no-param-reassign
+    n.dataset && (n.dataset.positionId = childrenTag++)
     tagChildren(n)
   })
 }
@@ -49,6 +43,7 @@ function tagElements (content) {
   const temp = document.createElement('div')
   temp.innerHTML = content
   tagChildren(temp)
+  childrenTag = 1
   return temp.innerHTML
 }
 

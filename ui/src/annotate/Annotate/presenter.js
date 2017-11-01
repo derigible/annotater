@@ -1,6 +1,5 @@
 import React, { Component } from 'react'
 import PropTypes from 'prop-types'
-import SortedMap from 'collections/sorted-map'
 
 import ScreenReaderContent from '@instructure/ui-core/lib/components/ScreenReaderContent'
 import themeable from '@instructure/ui-themeable'
@@ -10,29 +9,6 @@ import Element, { parseId } from './Element'
 
 import styles from './styles.css'
 import theme from './theme'
-
-function getInnerPosition (node) {
-  if (!node.dataset) {
-    if (!node.parentNode) { return null }
-    return getInnerPosition(node.parentNode)
-  }
-  return (node.dataset.innerPosition && parseInt(node.dataset.innerPosition, 10)) || 0
-}
-
-function relation (nodeA, nodeB) {
-  const nodeBId = parseId(nodeB)
-  let currentNode = nodeA
-  let prevNode = nodeA
-  let parentNodeId = currentNode.parentNode && parseId(currentNode.parentNode)
-  while (parentNodeId !== undefined && parentNodeId !== nodeBId && currentNode) {
-    parentNodeId = currentNode.parentNode && parseId(currentNode.parentNode)
-    prevNode = currentNode
-    currentNode = currentNode.parentNode
-  }
-  const childNodeId = parseId(prevNode)
-
-  return { parentNodeId, childNodeId }
-}
 
 @themeable(theme, styles)
 export default class Annotate extends Component {
@@ -52,27 +28,16 @@ export default class Annotate extends Component {
   constructor (props) {
     super(props)
     this.textContainer = document.createElement('div')
-    this.nodeMap = new SortedMap()
+    this.nodeMap = new Map()
     this.topLevel = []
     this.state = { selection: [] }
   }
 
   componentWillMount () {
     this.textContainer.innerHTML = this.props.text
-    this.mapElement(this.textContainer)
     this.textContainer.childNodes.forEach((n) => {
-      this.topLevel.push(this.nodeMap.get(parseId(n)))
+      this.topLevel.push(n)
     })
-  }
-
-  getContainingParentNode (node) {
-    const id = parseId(node.parentNode)
-    if (id) {
-      return this.nodeMap.get(id)
-    } else if (node.parentNode.parentNode) {
-      return this.getContainingParentNode(node.parentNode)
-    }
-    return null
   }
 
   getNodesBetween (left, right) {
@@ -89,56 +54,13 @@ export default class Annotate extends Component {
 
   checkSelected = () => {
     const sel = window.getSelection()
+    console.log(sel)
     // No selection was actually made or selection is being canceled
     if (sel.anchorNode === sel.focusNode && sel.anchorOffset === sel.focusOffset) {
       this.clearSelection()
       return
     }
-    const an = this.getContainingParentNode(sel.anchorNode)
-    const fn = this.getContainingParentNode(sel.focusNode)
-    if (an === null || fn === null) { return }
-    // eslint-disable-next-line no-bitwise
-    const inLine = sel.anchorNode.compareDocumentPosition(sel.focusNode) & Node.DOCUMENT_POSITION_FOLLOWING
-    const { parentNodeId } = relation(
-      inLine ? an.element : fn.element,
-      inLine ? fn.element : an.element
-    )
-
-    const ln = inLine ? an : fn
-    const rn = inLine ? fn : an
-    const anchorInnerPosition = getInnerPosition(inLine ? sel.anchorNode : sel.focusNode)
-    const focusInnerPosition = getInnerPosition(inLine ? sel.focusNode : sel.anchorNode)
-    // if inline but has a parentNodeId, means that ln.id > rn.id even though ln is first
-    // (confusing, i know. Need to think of something better eventually)
-    const selection = this.getNodesBetween(
-      parentNodeId ? rn.id : ln.id,
-      parentNodeId ? ln.id : rn.id
-    )
-    selection.forEach((n) => {
-      // eslint-disable-next-line no-param-reassign
-      n.selection.selected = true
-    })
-
-    let anchorOffset
-    let focusOffset
-    if (an.id !== fn.id) {
-      anchorOffset = inLine ? sel.anchorOffset : sel.focusOffset
-      focusOffset = inLine ? sel.focusOffset : sel.anchorOffset
-    } else {
-      const norm = sel.anchorOffset < sel.focusOffset
-      // eslint-disable-next-line prefer-destructuring
-      anchorOffset = norm ? sel.anchorOffset : sel.focusOffset
-      // eslint-disable-next-line prefer-destructuring
-      focusOffset = norm ? sel.focusOffset : sel.anchorOffset
-    }
-    selection[parentNodeId ? selection.length - 1 : 0].selection.anchorOffset = anchorOffset
-    selection[parentNodeId ? selection.length - 1 : 0].selection.anchorInnerPosition = anchorInnerPosition
-    selection[parentNodeId ? 0 : selection.length - 1].selection.focusOffset = focusOffset
-    selection[parentNodeId ? 0 : selection.length - 1].selection.focusInnerPosition = focusInnerPosition
-
-    this.updateSelected(selection)
-    this.setState({ selection })
-    window.getSelection().removeAllRanges()
+    // window.getSelection().removeAllRanges()
   }
 
   createAnnotation = (type, range, data) => {
@@ -154,21 +76,8 @@ export default class Annotate extends Component {
     this.setState({ selection: [] })
   }
 
-  updateSelected = (nodes) => {
-    this.clearSelection()
-    nodes.forEach((n) => {
-      n.component.setSelection(n.selection)
-    })
-  }
-
-  mapElement (element) {
-    if (element.dataset) {
-      const id = parseId(element)
-      id && this.nodeMap.set(id, { id, element, selection: { selected: false } })
-    }
-    element.childNodes && element.childNodes.forEach((el) => {
-      this.mapElement(el)
-    })
+  registerComponentToId (id, component) {
+    this.nodeMap.set(id, component)
   }
 
   renderNodes () {
