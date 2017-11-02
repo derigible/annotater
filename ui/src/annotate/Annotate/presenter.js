@@ -12,7 +12,7 @@ import theme from './theme'
 
 function precedesNode (pointNode, testNode) {
   // eslint-disable-next-line no-bitwise
-  return pointNode.compareDocumentPosition(testNode) & Node.DOCUMENT_POSITION_PRECEDING === 0
+  return (pointNode.compareDocumentPosition(testNode) & Node.DOCUMENT_POSITION_PRECEDING) === 0
 }
 
 @themeable(theme, styles)
@@ -45,14 +45,6 @@ export default class Annotate extends Component {
     })
   }
 
-  getNodesBetween (left, right) {
-    const nodes = []
-    for (let i = left; i <= right; i++) {
-      nodes.push(this.nodeMap.get(i))
-    }
-    return nodes // will always have at least one node in it
-  }
-
   getElementDefinition = (id) => {
     return this.nodeMap.get(id)
   }
@@ -64,13 +56,9 @@ export default class Annotate extends Component {
       this.clearSelection()
       return
     }
-    // eslint-disable-next-line no-bitwise
-    const startOffset = precedesNode(sel.anchorNode, sel.focusNode)
-      ? sel.anchorOffset
-      : sel.focusOffset
-    const endOffset = precedesNode(sel.anchorNode, sel.focusNode)
-      ? sel.focusOffset
-      : sel.anchorOffset
+    const inOrder = precedesNode(sel.anchorNode, sel.focusNode)
+    const startOffset = inOrder ? sel.anchorOffset : sel.focusOffset
+    const endOffset = inOrder ? sel.focusOffset : sel.anchorOffset
     const commonAncestor = sel.getRangeAt(0).commonAncestorContainer
     const tw = document.createTreeWalker(
       commonAncestor,
@@ -86,9 +74,9 @@ export default class Annotate extends Component {
       },
       false
     )
-    debugger
     const highlightDefs = []
     let anchorSet = false
+    const selectionSameNode = sel.anchorNode.isSameNode(sel.focusNode)
     while (tw.nextNode()) {
       if (isTextNode(tw.currentNode)) {
         if (tw.previousNode().contains(tw.nextNode()) && !anchorSet) {
@@ -97,7 +85,7 @@ export default class Annotate extends Component {
           anchorSet = true
         } else if (tw.nextNode() === null) {
           let hld
-          if (highlightDefs.length > 0 && sel.anchorNode.isSameNode(sel.focusNode)) {
+          if (highlightDefs.length > 0 && selectionSameNode) {
             hld = highlightDefs[highlightDefs.length - 1]
           } else {
             hld = { id: parseId(tw.currentNode) }
@@ -106,6 +94,8 @@ export default class Annotate extends Component {
           hld.textNode = tw.previousNode()
           hld.focusOffset = endOffset
           tw.nextNode()
+        } else {
+          tw.previousNode()
         }
       } else {
         highlightDefs.push({
