@@ -15,6 +15,8 @@ function precedesNode (pointNode, testNode) {
   return (pointNode.compareDocumentPosition(testNode) & Node.DOCUMENT_POSITION_PRECEDING) === 0
 }
 
+// TODO: 1) clipboard copy remove data attributes
+
 @themeable(theme, styles)
 export default class Annotate extends Component {
   static propTypes = {
@@ -75,14 +77,15 @@ export default class Annotate extends Component {
       false
     )
     const highlightDefs = []
-    let anchorSet = false
     const selectionSameNode = sel.anchorNode.isSameNode(sel.focusNode)
+    const startNode = inOrder ? sel.anchorNode : sel.focusNode
     while (tw.nextNode()) {
       if (isTextNode(tw.currentNode)) {
-        if (tw.previousNode().contains(tw.nextNode()) && !anchorSet) {
-          highlightDefs[0].textNode = tw.currentNode
-          highlightDefs[0].anchorOffset = startOffset
-          anchorSet = true
+        if (tw.previousNode().contains(tw.nextNode()) &&
+          tw.currentNode.isEqualNode(startNode)
+        ) {
+          highlightDefs[highlightDefs.length - 1].node = tw.currentNode
+          highlightDefs[highlightDefs.length - 1].anchorOffset = startOffset
         } else if (tw.nextNode() === null) {
           let hld
           if (highlightDefs.length > 0 && selectionSameNode) {
@@ -91,7 +94,7 @@ export default class Annotate extends Component {
             hld = { id: parseId(tw.currentNode) }
             highlightDefs.push(hld)
           }
-          hld.textNode = tw.previousNode()
+          hld.node = tw.previousNode()
           hld.focusOffset = endOffset
           tw.nextNode()
         } else {
@@ -99,11 +102,11 @@ export default class Annotate extends Component {
         }
       } else {
         highlightDefs.push({
-          id: parseId(tw.currentNode)
+          id: parseId(tw.currentNode),
+          node: tw.currentNode
         })
       }
     }
-    console.log(highlightDefs)
     // Get common ancestor
     // Create TreeWalker from that ancestor that shows
     // only elements and filters them if not part of
