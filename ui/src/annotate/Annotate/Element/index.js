@@ -3,11 +3,14 @@ import PropTypes from 'prop-types'
 import camelCase from 'lodash/camelCase'
 
 export function parseId (el) {
+  if (isTextNode(el)) {
+    return parseId(el.parentElement.closest('[data-id]'))
+  }
   return el.dataset && el.dataset.id
 }
 
-function isTextNode (el) {
-  return el.tagName === undefined
+export function isTextNode (el) {
+  return el.nodeType === Node.TEXT_NODE
 }
 
 function getStyles (style) {
@@ -29,6 +32,7 @@ export default class Element extends Component {
       style: PropTypes.object.isRequired
     }).isRequired,
     getElementDefinition: PropTypes.func.isRequired,
+    registerComponentToId: PropTypes.func.isRequired,
     id: PropTypes.string
   }
 
@@ -36,8 +40,12 @@ export default class Element extends Component {
     id: null
   }
 
+  componentWillMount () {
+    this.props.registerComponentToId(this.props.id, this)
+  }
+
   render () {
-    const { element, clearSelection, getElementDefinition } = this.props
+    const { element, clearSelection, getElementDefinition, registerComponentToId } = this.props
     const id = this.props.id === null ? parseId(element) : this.props.id
     const Node = element.tagName.toLowerCase()
 
@@ -54,6 +62,7 @@ export default class Element extends Component {
                 key={id}
                 clearSelection={clearSelection}
                 getElementDefinition={getElementDefinition}
+                registerComponentToId={registerComponentToId}
                 element={n}
               />
             )

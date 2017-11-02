@@ -5,10 +5,15 @@ import ScreenReaderContent from '@instructure/ui-core/lib/components/ScreenReade
 import themeable from '@instructure/ui-themeable'
 import * as nodeTypes from '../nodeTypes'
 
-import Element, { parseId } from './Element'
+import Element, { parseId, isTextNode } from './Element'
 
 import styles from './styles.css'
 import theme from './theme'
+
+function precedesNode (pointNode, testNode) {
+  // eslint-disable-next-line no-bitwise
+  return pointNode.compareDocumentPosition(testNode) & Node.DOCUMENT_POSITION_PRECEDING === 0
+}
 
 @themeable(theme, styles)
 export default class Annotate extends Component {
@@ -54,12 +59,68 @@ export default class Annotate extends Component {
 
   checkSelected = () => {
     const sel = window.getSelection()
-    console.log(sel)
     // No selection was actually made or selection is being canceled
-    if (sel.anchorNode === sel.focusNode && sel.anchorOffset === sel.focusOffset) {
+    if (sel.isCollapsed) {
       this.clearSelection()
       return
     }
+    // eslint-disable-next-line no-bitwise
+    const startOffset = precedesNode(sel.anchorNode, sel.focusNode)
+      ? sel.anchorOffset
+      : sel.focusOffset
+    const endOffset = precedesNode(sel.anchorNode, sel.focusNode)
+      ? sel.focusOffset
+      : sel.anchorOffset
+    const commonAncestor = sel.getRangeAt(0).commonAncestorContainer
+    const tw = document.createTreeWalker(
+      commonAncestor,
+      // eslint-disable-next-line no-bitwise
+      NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
+      {
+        acceptNode: (node) => {
+          if (sel.containsNode(node, true)) {
+            return NodeFilter.FILTER_ACCEPT
+          }
+          return NodeFilter.FILTER_REJECT
+        }
+      },
+      false
+    )
+    debugger
+    const highlightDefs = []
+    let anchorSet = false
+    while (tw.nextNode()) {
+      if (isTextNode(tw.currentNode)) {
+        if (tw.previousNode().contains(tw.nextNode()) && !anchorSet) {
+          highlightDefs[0].textNode = tw.currentNode
+          highlightDefs[0].anchorOffset = startOffset
+          anchorSet = true
+        } else if (tw.nextNode() === null) {
+          let hld
+          if (highlightDefs.length > 0 && sel.anchorNode.isSameNode(sel.focusNode)) {
+            hld = highlightDefs[highlightDefs.length - 1]
+          } else {
+            hld = { id: parseId(tw.currentNode) }
+            highlightDefs.push(hld)
+          }
+          hld.textNode = tw.previousNode()
+          hld.focusOffset = endOffset
+          tw.nextNode()
+        }
+      } else {
+        highlightDefs.push({
+          id: parseId(tw.currentNode)
+        })
+      }
+    }
+    console.log(highlightDefs)
+    // Get common ancestor
+    // Create TreeWalker from that ancestor that shows
+    // only elements and filters them if not part of
+    // selection.containsNode with partial containment
+    // get id from each element and call Component method
+    // to highlight
+
     // window.getSelection().removeAllRanges()
   }
 
@@ -76,7 +137,7 @@ export default class Annotate extends Component {
     this.setState({ selection: [] })
   }
 
-  registerComponentToId (id, component) {
+  registerComponentToId = (id, component) => {
     this.nodeMap.set(id, component)
   }
 
@@ -88,6 +149,7 @@ export default class Annotate extends Component {
           clearSelection={this.clearSelection}
           element={el}
           getElementDefinition={this.getElementDefinition}
+          registerComponentToId={this.registerComponentToId}
         />
       )
     })
