@@ -111,8 +111,6 @@ export default class Annotate extends Component {
       }
     }
 
-    console.log(highlightDefs)
-
     highlightDefs.forEach((n, k) => {
       const node = this.nodeMap.get(k)
       node.highlightNode(n)
@@ -127,7 +125,7 @@ export default class Annotate extends Component {
   }
 
   clearSelection = () => {
-    this.state.selection.forEach((_n, k) => {
+    this.state.selection.forEach((n, k) => {
       const node = this.nodeMap.get(k)
       node.clearHighlight()
     })

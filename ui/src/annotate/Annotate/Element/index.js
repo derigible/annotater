@@ -29,7 +29,6 @@ function styleSelection (shouldStyle) {
 }
 
 function splitNode (node, highlightDef, index) {
-  debugger
   if (highlightDef.anchorOffset && highlightDef.focusOffset === undefined) {
     return [
       <span key={`${index}anchor_left`}>{node.textContent.substring(0, highlightDef.anchorOffset)}</span>,
@@ -51,7 +50,6 @@ function splitNode (node, highlightDef, index) {
 }
 
 function splitNodes (nodes, anchorIndex, focusIndex, highlightDef) {
-  debugger
   if ((anchorIndex === focusIndex) || (anchorIndex > -1 && focusIndex === -1)) {
     return [[anchorIndex, 1, ...splitNode(nodes[anchorIndex], highlightDef, anchorIndex)]]
   } else if (anchorIndex > -1 && focusIndex > -1) {
@@ -92,7 +90,6 @@ export default class Element extends Component {
     if (highlightDef.anchorOffset || highlightDef.focusOffset) {
       const anchorIndex = findIndex(this.childNodes, (n) => n.isEqualNode(highlightDef.anchorNode))
       const focusIndex = findIndex(this.childNodes, (n) => n.isEqualNode(highlightDef.focusNode))
-      debugger
       this.childNodes = update(this.childNodes,
         {
           $splice: splitNodes(this.childNodes, anchorIndex, focusIndex, highlightDef)
@@ -106,13 +103,25 @@ export default class Element extends Component {
 
   clearHighlight () {
     if (['UL', 'OL', 'TABLE'].includes(this.props.element.tagName)) { return }
-    const index = findIndex(this.childNodes, (n) => n.nodeType === undefined)
+    const anchorIndex = findIndex(this.childNodes, (n) => n.nodeType === undefined)
     const toChange = this.childNodes.filter((n) => n.nodeType === undefined)
-    if (index >= 0) {
-      const tc = toChange.map((n) => n.props.children).join('')
-      this.childNodes = update(this.childNodes, {
-        $splice: [[index, toChange.length, document.createTextNode(tc)]]
-      })
+    if (anchorIndex >= 0) {
+      if (toChange.length > 3) {
+        const anchorTc = [toChange[0], toChange[1]].map((n) => n.props.children).join('')
+        const focusTc = [toChange[2], toChange[3]].map((n) => n.props.children).join('')
+        const focusIndex = findIndex(this.childNodes, (n) => toChange[2] === n)
+        this.childNodes = update(this.childNodes, {
+          $splice: [
+            [anchorIndex, 2, document.createTextNode(anchorTc)],
+            [focusIndex - 1, 2, document.createTextNode(focusTc)]
+          ]
+        })
+      } else {
+        const tc = toChange.map((n) => n.props.children).join('')
+        this.childNodes = update(this.childNodes, {
+          $splice: [[anchorIndex, 3, document.createTextNode(tc)]]
+        })
+      }
     }
     this.setState({ highlight: 'none' })
   }
