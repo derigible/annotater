@@ -61,6 +61,13 @@ export default class Annotate extends Component {
     const inOrder = precedesNode(sel.anchorNode, sel.focusNode)
     const startOffset = inOrder ? sel.anchorOffset : sel.focusOffset
     const endOffset = inOrder ? sel.focusOffset : sel.anchorOffset
+
+    // Get common ancestor
+    // Create TreeWalker from that ancestor that shows
+    // only elements and filters them if not part of
+    // selection.containsNode with partial containment
+    // get id from each element and call Component method
+    // to highlight
     const commonAncestor = sel.getRangeAt(0).commonAncestorContainer
     const tw = document.createTreeWalker(
       commonAncestor,
@@ -76,45 +83,43 @@ export default class Annotate extends Component {
       },
       false
     )
-    const highlightDefs = []
-    const selectionSameNode = sel.anchorNode.isSameNode(sel.focusNode)
+
+    const highlightDefs = new Map()
     const startNode = inOrder ? sel.anchorNode : sel.focusNode
-    while (tw.nextNode()) {
-      if (isTextNode(tw.currentNode)) {
-        if (tw.previousNode().contains(tw.nextNode()) &&
-          tw.currentNode.isEqualNode(startNode)
-        ) {
-          highlightDefs[highlightDefs.length - 1].node = tw.currentNode
-          highlightDefs[highlightDefs.length - 1].anchorOffset = startOffset
-        } else if (tw.nextNode() === null) {
-          let hld
-          if (highlightDefs.length > 0 && selectionSameNode) {
-            hld = highlightDefs[highlightDefs.length - 1]
-          } else {
-            hld = { id: parseId(tw.currentNode) }
-            highlightDefs.push(hld)
+    const endNode = inOrder ? sel.focusNode : sel.anchorNode
+    const nodes = []
+    do { nodes.push(tw.currentNode) } while (tw.nextNode())
+    for (let i = 0; i < nodes.length; i++) {
+      const node = nodes[i]
+      if (isTextNode(node)) {
+        if (node.isEqualNode(startNode)) {
+          if (!highlightDefs.has(parseId(node)) > 0) {
+            highlightDefs.set(parseId(node), { id: parseId(node) })
           }
-          hld.node = tw.previousNode()
-          hld.focusOffset = endOffset
-          tw.nextNode()
-        } else {
-          tw.previousNode()
+          highlightDefs.get(parseId(node)).anchorNode = node
+          highlightDefs.get(parseId(node)).anchorOffset = startOffset
+        }
+        if (node.isEqualNode(endNode)) {
+          if (!highlightDefs.has(parseId(node)) > 0) {
+            highlightDefs.set(parseId(node), { id: parseId(node) })
+          }
+          highlightDefs.get(parseId(node)).focusNode = node
+          highlightDefs.get(parseId(node)).focusOffset = endOffset
         }
       } else {
-        highlightDefs.push({
-          id: parseId(tw.currentNode),
-          node: tw.currentNode
-        })
+        highlightDefs.set(parseId(node), { id: parseId(node) })
       }
     }
-    // Get common ancestor
-    // Create TreeWalker from that ancestor that shows
-    // only elements and filters them if not part of
-    // selection.containsNode with partial containment
-    // get id from each element and call Component method
-    // to highlight
 
-    // window.getSelection().removeAllRanges()
+    console.log(highlightDefs)
+
+    highlightDefs.forEach((n, k) => {
+      const node = this.nodeMap.get(k)
+      node.highlightNode(n)
+    })
+    this.setState({ selection: highlightDefs })
+
+    window.getSelection().removeAllRanges()
   }
 
   createAnnotation = (type, range, data) => {
@@ -122,10 +127,9 @@ export default class Annotate extends Component {
   }
 
   clearSelection = () => {
-    this.state.selection.forEach((s) => {
-      // eslint-disable-next-line no-param-reassign
-      s.selection = { selected: false }
-      s.component.clearSelection()
+    this.state.selection.forEach((_n, k) => {
+      const node = this.nodeMap.get(k)
+      node.clearHighlight()
     })
     this.setState({ selection: [] })
   }
@@ -135,10 +139,10 @@ export default class Annotate extends Component {
   }
 
   renderNodes () {
-    return this.topLevel.map((el) => {
+    return this.topLevel.filter((el) => !isTextNode(el)).map((el) => {
       return (
         <Element
-          key={el.id}
+          key={parseId(el)}
           clearSelection={this.clearSelection}
           element={el}
           getElementDefinition={this.getElementDefinition}
