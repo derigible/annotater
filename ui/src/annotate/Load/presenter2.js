@@ -1,6 +1,5 @@
 import React, { Component } from 'react'
 import PropTypes from 'prop-types'
-import camelCase from 'lodash/camelCase'
 import debounce from 'lodash/debounce'
 import nanoid from 'nanoid'
 
@@ -30,151 +29,27 @@ function getProps (overrides) {
   }
 }
 
-const blockLevelTags = new Set([
-  'ADDRESS',
-  'ARTICLE',
-  'ASIDE',
-  'BLOCKQUOTE',
-  'CANVAS',
-  'DD',
-  'DIV',
-  'DL',
-  'DT',
-  'FIELDSET',
-  'FIGCAPTION',
-  'FIGURE',
-  'FOOTER',
-  'FORM',
-  'H1',
-  'H2',
-  'H3',
-  'H4',
-  'H5',
-  'H6',
-  'HEADER',
-  'HR',
-  'LI',
-  'MAIN',
-  'NAV',
-  'NOSCRIPT',
-  'OL',
-  'OUTPUT',
-  'P',
-  'PRE',
-  'SECTION',
-  'TABLE',
-  'TFOOT',
-  'UL',
-  'VIDEO'
-])
-const inlineTags = new Set([
-  'A',
-  'ABBR',
-  'ACRONYM',
-  'B',
-  'BDO',
-  'BIG',
-  'BR',
-  'BUTTON',
-  'CITE',
-  'CODE',
-  'DFN',
-  'EM',
-  'I',
-  'IMG',
-  'INPUT',
-  'KBD',
-  'LABEL',
-  'MAP',
-  'OBJECT',
-  'Q',
-  'SAMP',
-  'SCRIPT',
-  'SELECT',
-  'SMALL',
-  'SPAN',
-  'STRONG',
-  'SUB',
-  'SUP',
-  'TEXTAREA',
-  'TIME',
-  'TT',
-  'VAR'
-])
+const tags = new Set(['DIV', 'P', 'UL', 'OL', 'TABLE', 'SPAN', 'TD', 'TH', 'LI', 'SUP', 'SUB', 'STRONG', 'EM', 'A'])
 
-function getStyles (style) {
-  const inlineStyles = {}
-  if (style !== undefined) {
-    for (let i = 0; i < style.length; i++) {
-      const styleName = style.item(i)
-      inlineStyles[camelCase(styleName)] = style.getPropertyValue(styleName)
+function shouldTag (tagName) {
+  return tags.has(tagName) || /H\d+/.test(tagName)
+}
+
+function tagChildren (node) {
+  node.childNodes && node.childNodes.forEach((n) => {
+    if (n.tagName && shouldTag(n.tagName)) {
+      // eslint-disable-next-line no-param-reassign
+      n.dataset.id = nanoid(10)
     }
-  }
-  return inlineStyles
+    tagChildren(n)
+  })
 }
 
-function isTextNode (el) {
-  return el.nodeType === Node.TEXT_NODE
-}
-
-function createTag (node) {
-  return {
-    id: nanoid(10),
-    tag: isTextNode(node) ? 'TEXT' : node.tagName,
-    styles: getStyles(node.style)
-  }
-}
-
-function getParentStyles (node, tag) {
-  console.log(node, node.style, getStyles(node.style))
-  if (node.style) {
-    // eslint-disable-next-line no-param-reassign
-    tag.styles = Object.assign({}, getStyles(node.style), tag.styles) // newer styles matter less
-  }
-  if (inlineTags.has(node.parentNode.tagName)) {
-    getParentStyles(node.parentNode, tag)
-  }
-  // Currently stop at any block level parent, may need to reevaluate later
-}
-
-function getParentTags (node, parentTags) {
-  if (inlineTags.has(node.tagName)) {
-    parentTags.push(node.tagName)
-  }
-  // currently stops at any block level parent, may need to reevaluate later
-}
-
-function flattenDoc (node, jsonDoc) {
-  if (isTextNode(node)) {
-    const tag = createTag(node)
-    tag.content = node.textContent
-    getParentStyles(node.parentNode, tag)
-    tag.parentTags = []
-    getParentTags(node.parentNode, tag.parentTags)
-    jsonDoc.push(tag)
-  } else if (blockLevelTags.has(node.tagName)) {
-    const tag = createTag(node)
-    tag.children = []
-    Array.from(node.childNodes).forEach((n) => {
-      flattenDoc(n, tag.children)
-    })
-    jsonDoc.push(tag)
-  } else if (inlineTags.has(node.tagName)) {
-    Array.from(node.childNodes).forEach((n) => {
-      flattenDoc(n, jsonDoc)
-    })
-  }
-}
-
-function docToJson (content) {
+function tagElements (content) {
   const temp = document.createElement('div')
   temp.innerHTML = content
-  console.log(content, temp)
-  const outJson = []
-  temp.childNodes.forEach((n) => {
-    flattenDoc(n, outJson)
-  })
-  return outJson
+  tagChildren(temp)
+  return temp.innerHTML
 }
 
 export default class Load extends Component {
@@ -196,9 +71,7 @@ export default class Load extends Component {
   }
 
   submitText = () => {
-    const out = docToJson(this.state.rceContent)
-    console.log(out)
-    this.props.submitText(out)
+    this.props.submitText(tagElements(this.state.rceContent))
   }
 
   uniqueId = 'textAreaRCE'

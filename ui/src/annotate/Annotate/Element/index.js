@@ -11,8 +11,21 @@ export function parseId (el) {
   return el.dataset && el.dataset.id
 }
 
+export function precedesNode (pointNode, testNode) {
+  // eslint-disable-next-line no-bitwise
+  return (pointNode.compareDocumentPosition(testNode) & Node.DOCUMENT_POSITION_PRECEDING) === 0
+}
+
 export function isTextNode (el) {
   return el.nodeType === Node.TEXT_NODE
+}
+
+function containsNode (toCheck, node) {
+  if (toCheck.isEqualNode(node)) { return true }
+  if (toCheck.childNodes.length > 0) {
+    return Array.from(toCheck.childNodes).some((n) => containsNode(n, node))
+  }
+  return false
 }
 
 function getStyles (style) {
@@ -85,7 +98,7 @@ export default class Element extends Component {
     this.childNodes = Array.from(this.props.element.childNodes)
   }
 
-  highlightNode (highlightDef) {
+  highlightNode (highlightDef, anchorNode, focusNode) {
     if (['UL', 'OL', 'TABLE'].includes(this.props.element.tagName)) { return }
     if (highlightDef.anchorOffset || highlightDef.focusOffset) {
       const anchorIndex = findIndex(this.childNodes, (n) => n.isEqualNode(highlightDef.anchorNode))
@@ -96,6 +109,11 @@ export default class Element extends Component {
         }
       )
       this.setState({ highlight: 'some' })
+    } else if (anchorNode) {
+      const index = findIndex(this.childNodes, (n) => containsNode(n, anchorNode))
+      for (let i = index + 1; i < this.childNodes.length; i++) {
+        const n = this.childNodes[i]
+      }
     } else {
       this.setState({ highlight: 'all' })
     }
@@ -103,6 +121,7 @@ export default class Element extends Component {
 
   clearHighlight () {
     if (['UL', 'OL', 'TABLE'].includes(this.props.element.tagName)) { return }
+    // Find the react components in the list (n.nodeType === undefined)
     const anchorIndex = findIndex(this.childNodes, (n) => n.nodeType === undefined)
     const toChange = this.childNodes.filter((n) => n.nodeType === undefined)
     if (anchorIndex >= 0) {
@@ -115,6 +134,11 @@ export default class Element extends Component {
             [anchorIndex, 2, document.createTextNode(anchorTc)],
             [focusIndex - 1, 2, document.createTextNode(focusTc)]
           ]
+        })
+      } else if (toChange.length === 2) {
+        const tc = toChange.map((n) => n.props.children).join('')
+        this.childNodes = update(this.childNodes, {
+          $splice: [[anchorIndex, 2, document.createTextNode(tc)]]
         })
       } else {
         const tc = toChange.map((n) => n.props.children).join('')

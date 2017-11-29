@@ -60,7 +60,6 @@ export default class Annotate extends Component {
       : precedesNode(sel.anchorNode, sel.focusNode)
     const startOffset = inOrder ? sel.anchorOffset : sel.focusOffset
     const endOffset = inOrder ? sel.focusOffset : sel.anchorOffset
-    console.log(sel)
 
     // Get common ancestor
     // Create TreeWalker from that ancestor that shows
@@ -135,7 +134,7 @@ export default class Annotate extends Component {
     })
     this.setState({ selection: highlightDefs })
 
-    // window.getSelection().removeAllRanges()
+    window.getSelection().removeAllRanges()
   }
 
   createAnnotation = (type, range, data) => {
@@ -169,7 +168,6 @@ export default class Annotate extends Component {
   }
 
   render () {
-    console.log(this.nodeMap.get('~IdpMbqkje'))
     return (
       // eslint-disable-next-line jsx-a11y/no-static-element-interactions
       <div
