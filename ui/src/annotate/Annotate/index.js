@@ -12,25 +12,32 @@ class AnnotateDataWrapper extends Component {
   static propTypes = {
     documentId: PropTypes.string.isRequired,
     fetchNodes: PropTypes.func.isRequired,
-    fetchText: PropTypes.func.isRequired,
+    fetchDefinition: PropTypes.func.isRequired,
     nodes: PropTypes.arrayOf(nodeDefinition),
     nodesReceived: PropTypes.bool,
     setDisplayLoadingSpinner: PropTypes.func.isRequired,
     submitNode: PropTypes.func.isRequired,
-    text: PropTypes.string,
+    docDefinition: PropTypes.arrayOf(PropTypes.shape({
+      id: PropTypes.string.isRequired,
+      tag: PropTypes.string.isRequired,
+      styles: PropTypes.object,
+      children: PropTypes.array,
+      content: PropTypes.string,
+      parentTags: PropTypes.array
+    })),
     unsetDisplayLoadingSpinner: PropTypes.func.isRequired
   }
 
   static defaultProps = {
-    text: null,
+    docDefinition: null,
     nodes: [],
     nodesReceived: false
   }
 
   componentDidMount () {
     this.props.setDisplayLoadingSpinner()
-    if (this.props.text === null) {
-      this.props.fetchText(this.props.documentId)
+    if (this.props.docDefinition === null) {
+      this.props.fetchDefinition(this.props.documentId)
     }
     if (!this.props.nodesReceived) {
       this.props.fetchNodes(this.props.documentId)
@@ -44,7 +51,7 @@ class AnnotateDataWrapper extends Component {
   }
 
   get isLoading () {
-    return this.props.text === null ||
+    return this.props.docDefinition === null ||
       !this.props.nodesReceived
   }
 
@@ -69,7 +76,7 @@ class AnnotateDataWrapper extends Component {
         annotations={{}}
         createAnnotation={this.createAnnotation}
         nodes={this.props.nodes}
-        text={this.props.text}
+        docDefinition={this.props.docDefinition}
         removeNode={this.removeNode}
       />
     )
@@ -80,7 +87,7 @@ const mapStateToProps = (store, props) => {
   const documentObj = store.annotate[props.documentId]
   return {
     nodes: documentObj && documentObj.nodes,
-    text: documentObj && documentObj.text,
+    docDefinition: documentObj && documentObj.docDefinition,
     nodesReceived: documentObj !== undefined && documentObj.nodesReceived
   }
 }
@@ -88,7 +95,7 @@ const mapStateToProps = (store, props) => {
 const mapDispatchToProps = {
   submitNode: persistence.submitNode,
   fetchNodes: persistence.fetchNodes,
-  fetchText: persistence.fetchText,
+  fetchDefinition: persistence.fetchDefinition,
   setDisplayLoadingSpinner: appActions.setDisplayLoadingSpinner,
   unsetDisplayLoadingSpinner: appActions.unsetDisplayLoadingSpinner
 }

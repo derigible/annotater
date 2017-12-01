@@ -16,12 +16,12 @@ export default function (state = initialState, action) {
           }
         }
       )
-    case actionTypes.LOAD_TEXT:
+    case actionTypes.LOAD_DEFINITION:
       return update(state,
         {
           [action.id]: {
             [getVerb(state, action)]: {
-              text: action.text
+              docDefinition: action.definition
             }
           }
         }

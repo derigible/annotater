@@ -126,7 +126,6 @@ function createTag (node) {
 }
 
 function getParentStyles (node, tag) {
-  console.log(node, node.style, getStyles(node.style))
   if (node.style) {
     // eslint-disable-next-line no-param-reassign
     tag.styles = Object.assign({}, getStyles(node.style), tag.styles) // newer styles matter less
@@ -169,7 +168,6 @@ function flattenDoc (node, jsonDoc) {
 function docToJson (content) {
   const temp = document.createElement('div')
   temp.innerHTML = content
-  console.log(content, temp)
   const outJson = []
   temp.childNodes.forEach((n) => {
     flattenDoc(n, outJson)
@@ -179,7 +177,7 @@ function docToJson (content) {
 
 export default class Load extends Component {
   static propTypes = {
-    submitText: PropTypes.func.isRequired
+    submitDefinition: PropTypes.func.isRequired
   }
 
   state = {
@@ -195,10 +193,9 @@ export default class Load extends Component {
     this.textareaRef = node
   }
 
-  submitText = () => {
+  submitDefinition = () => {
     const out = docToJson(this.state.rceContent)
-    console.log(out)
-    this.props.submitText(out)
+    this.props.submitDefinition(out)
   }
 
   uniqueId = 'textAreaRCE'
@@ -246,7 +243,7 @@ export default class Load extends Component {
             />
             <Button
               variant="primary"
-              onClick={this.submitText}
+              onClick={this.submitDefinition}
             >
               Import
             </Button>

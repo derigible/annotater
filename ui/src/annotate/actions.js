@@ -1,10 +1,10 @@
 import * as actionTypes from './actionTypes'
 
-export const loadText = (id, text) => {
+export const loadDefinition = (id, definition) => {
   return {
-    type: actionTypes.LOAD_TEXT,
+    type: actionTypes.LOAD_DEFINITION,
     id,
-    text
+    definition
   }
 }
 

@@ -6,7 +6,7 @@ import * as colors from '../colors'
 /* Nodes from persistence will have a schema as follows:
  * {
  *   id: <string>,
- *   range: [<offset>, <length>],
+ *   range: <any type>,
  *   type: oneOf(Annotate.nodeTypes)
  *   data: {
  *     <specific to the nodeType>

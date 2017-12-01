@@ -16,15 +16,15 @@ const defaultGetPlugin = function () {
 
 const store = storeEngine.createStore([localStorage, sessionStorage], [defaultGetPlugin])
 
-export function uploadTextDocument (text) {
+export function uploadDefinitionDocument (definition) {
   const id = nanoid()
-  const node = createNode(nodeTypes.TEXT, [0, text.length])
-  store.set(`${id}_text`, text)
+  const node = createNode(nodeTypes.TEXT, 'document')
+  store.set(`${id}_definition`, definition)
   store.set(`${id}_nodes`, [node])
   return Promise.resolve(
     {
       id,
-      text
+      definition
     }
   )
 }
@@ -49,8 +49,8 @@ export function getDocumentNodes (documentId) {
   )
 }
 
-export function getDocumentText (documentId) {
+export function getDocumentDefinition (documentId) {
   return Promise.resolve(
-    store.get(`${documentId}_text`)
+    store.get(`${documentId}_definition`)
   )
 }

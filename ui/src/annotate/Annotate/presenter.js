@@ -3,21 +3,29 @@ import PropTypes from 'prop-types'
 
 import ScreenReaderContent from '@instructure/ui-core/lib/components/ScreenReaderContent'
 import themeable from '@instructure/ui-themeable'
-// import * as nodeTypes from '../nodeTypes'
 
-import Element, { parseId, isTextNode, precedesNode } from './Element'
+import Node from './Node'
 
 import styles from './styles.css'
 import theme from './theme'
 
-// TODO: 1) clipboard copy remove data attributes
-
-
+export function precedesNode (pointNode, testNode) {
+  // eslint-disable-next-line no-bitwise
+  return (pointNode.compareDocumentPosition(testNode) & Node.DOCUMENT_POSITION_PRECEDING) === 0
+}
 
 @themeable(theme, styles)
 export default class Annotate extends Component {
   static propTypes = {
     createAnnotation: PropTypes.func.isRequired,
+    docDefinition: PropTypes.arrayOf(PropTypes.shape({
+      id: PropTypes.string.isRequired,
+      tag: PropTypes.string.isRequired,
+      styles: PropTypes.object,
+      children: PropTypes.array,
+      content: PropTypes.string,
+      parentTags: PropTypes.array
+    })).isRequired // ,
     // annotations: PropTypes.objectOf(
     //   PropTypes.arrayOf(
     //     PropTypes.shape({
@@ -26,22 +34,7 @@ export default class Annotate extends Component {
     //     })
     //   )
     // ).isRequired,
-    text: PropTypes.string.isRequired
-  }
-
-  constructor (props) {
-    super(props)
-    this.textContainer = document.createElement('div')
-    this.nodeMap = new Map()
-    this.topLevel = []
-    this.state = { selection: [] }
-  }
-
-  componentWillMount () {
-    this.textContainer.innerHTML = this.props.text
-    this.textContainer.childNodes.forEach((n) => {
-      this.topLevel.push(n)
-    })
+    // nodes: PropTypes.array.isRequired
   }
 
   getElementDefinition = (id) => {
@@ -53,88 +46,13 @@ export default class Annotate extends Component {
     // No selection was actually made or selection is being canceled
     if (sel.isCollapsed) {
       this.clearSelection()
-      return
+      // return
     }
-    const inOrder = sel.anchorNode.isEqualNode(sel.focusNode)
-      ? sel.anchorOffset < sel.focusOffset
-      : precedesNode(sel.anchorNode, sel.focusNode)
-    const startOffset = inOrder ? sel.anchorOffset : sel.focusOffset
-    const endOffset = inOrder ? sel.focusOffset : sel.anchorOffset
-    console.log(sel)
-
-    // Get common ancestor
-    // Create TreeWalker from that ancestor that shows
-    // only elements and filters them if not part of
-    // selection.containsNode with partial containment
-    // get id from each element and call Component method
-    // to highlight
-    const commonAncestor = sel.getRangeAt(0).commonAncestorContainer
-    const tw = document.createTreeWalker(
-      commonAncestor,
-      // eslint-disable-next-line no-bitwise
-      NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
-      {
-        acceptNode: (node) => {
-          if (sel.containsNode(node, true)) {
-            return NodeFilter.FILTER_ACCEPT
-          }
-          return NodeFilter.FILTER_REJECT
-        }
-      },
-      false
-    )
-
-    const highlightDefs = new Map()
-    const startNode = inOrder ? sel.anchorNode : sel.focusNode
-    const endNode = inOrder ? sel.focusNode : sel.anchorNode
-    const nodes = []
-    do { nodes.push(tw.currentNode) } while (tw.nextNode())
-    for (let i = 0; i < nodes.length; i++) {
-      const node = nodes[i]
-      if (isTextNode(node)) {
-        if (node.isEqualNode(startNode)) {
-          if (!highlightDefs.has(parseId(node)) > 0) {
-            highlightDefs.set(parseId(node), { id: parseId(node) })
-          }
-          highlightDefs.get(parseId(node)).anchorNode = node
-          highlightDefs.get(parseId(node)).anchorOffset = startOffset
-          highlightDefs.get(parseId(node)).node = node
-        }
-        if (node.isEqualNode(endNode)) {
-          if (!highlightDefs.has(parseId(node)) > 0) {
-            highlightDefs.set(parseId(node), { id: parseId(node) })
-          }
-          highlightDefs.get(parseId(node)).focusNode = node
-          highlightDefs.get(parseId(node)).focusOffset = endOffset
-          highlightDefs.get(parseId(node)).node = node
-        }
-      } else {
-        highlightDefs.set(parseId(node), { id: parseId(node), node })
-      }
-    }
-
-    highlightDefs.forEach((n, k) => {
-      const node = this.nodeMap.get(k)
-      if (
-        n.node &&
-        n.node.contains &&
-        !n.node.isEqualNode(sel.anchorNode) &&
-        n.node.contains(sel.anchorNode)
-      ) {
-        if (
-          !n.node.isEqualNode(sel.focusNode) &&
-          n.node.contains(sel.focusNode)
-        ) {
-          node.highlightNode(n, sel.anchorNode)
-        } else {
-          node.highlightNode(n, sel.anchorNode, sel.focusNode)
-        }
-      } else {
-        node.highlightNode(n)
-      }
-    })
-    this.setState({ selection: highlightDefs })
-
+    // const inOrder = sel.anchorNode.isEqualNode(sel.focusNode)
+    //   ? sel.anchorOffset < sel.focusOffset
+    //   : precedesNode(sel.anchorNode, sel.focusNode)
+    // const startOffset = inOrder ? sel.anchorOffset : sel.focusOffset
+    // const endOffset = inOrder ? sel.focusOffset : sel.anchorOffset
     // window.getSelection().removeAllRanges()
   }
 
@@ -154,22 +72,7 @@ export default class Annotate extends Component {
     this.nodeMap.set(id, component)
   }
 
-  renderNodes () {
-    return this.topLevel.filter((el) => !isTextNode(el)).map((el) => {
-      return (
-        <Element
-          key={parseId(el)}
-          clearSelection={this.clearSelection}
-          element={el}
-          getElementDefinition={this.getElementDefinition}
-          registerComponentToId={this.registerComponentToId}
-        />
-      )
-    })
-  }
-
   render () {
-    console.log(this.nodeMap.get('~IdpMbqkje'))
     return (
       // eslint-disable-next-line jsx-a11y/no-static-element-interactions
       <div
@@ -180,7 +83,16 @@ export default class Annotate extends Component {
         className={styles.container}
       >
         <ScreenReaderContent>Select some text to bring up annotation options</ScreenReaderContent>
-        {this.renderNodes()}
+        {
+          this.props.docDefinition.map((node) => {
+            return (
+              <Node
+                key={node.id}
+                node={node}
+              />
+            )
+          })
+        }
       </div>
     )
   }

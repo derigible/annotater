@@ -5,14 +5,14 @@ import * as appActions from '../app/actions'
 import grit from '../grit'
 
 // When submitting text, you must also include its default node
-export function submitText (text) {
+export function submitDefinition (definition) {
   return function (dispatch) {
     dispatch(appActions.setDisplayLoadingSpinner())
 
-    return grit.uploadTextDocument(text)
+    return grit.uploadDefinitionDocument(definition)
       .then(
         (data) => {
-          dispatch(actions.loadText(data.id, data.text))
+          dispatch(actions.loadDefinition(data.id, data.definition))
           return data
         },
         (error) => dispatch(appActions.setAlert(error))
@@ -54,11 +54,11 @@ export function fetchNodes (documentId) {
   }
 }
 
-export function fetchText (documentId) {
+export function fetchDefinition (documentId) {
   return function (dispatch) {
-    return grit.getDocumentText(documentId).then(
+    return grit.getDocumentDefinition(documentId).then(
       (data) => {
-        dispatch(actions.loadText(documentId, data))
+        dispatch(actions.loadDefinition(documentId, data))
         return data
       }
     )

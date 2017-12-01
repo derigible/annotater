@@ -1,6 +1,6 @@
 import { connect } from 'react-redux'
 
 import Load from './presenter'
-import { submitText } from '../persistence'
+import { submitDefinition } from '../persistence'
 
-export default connect(null, { submitText })(Load)
+export default connect(null, { submitDefinition })(Load)
