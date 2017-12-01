@@ -63,6 +63,9 @@ const blockLevelTags = new Set([
   'PRE',
   'SECTION',
   'TABLE',
+  'THEAD',
+  'TBODY',
+  'TR',
   'TFOOT',
   'UL',
   'VIDEO'
@@ -97,6 +100,8 @@ const inlineTags = new Set([
   'SUB',
   'SUP',
   'TEXTAREA',
+  'TD',
+  'TH',
   'TIME',
   'TT',
   'VAR'
@@ -144,7 +149,8 @@ function getParentTags (node, parentTags) {
 }
 
 function flattenDoc (node, jsonDoc) {
-  if (isTextNode(node)) {
+  console.log(node)
+  if (isTextNode(node) && !node.textContent.match(/(\r\n|\n|\r)/gm)) {
     const tag = createTag(node)
     tag.content = node.textContent
     getParentStyles(node.parentNode, tag)
@@ -152,6 +158,7 @@ function flattenDoc (node, jsonDoc) {
     getParentTags(node.parentNode, tag.parentTags)
     jsonDoc.push(tag)
   } else if (blockLevelTags.has(node.tagName)) {
+    console.log(node)
     const tag = createTag(node)
     tag.children = []
     Array.from(node.childNodes).forEach((n) => {
